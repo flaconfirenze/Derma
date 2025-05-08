@@ -174,7 +174,6 @@
         .chevron {
           transition: transform 0.3s;
         }
-
         .chevron.active {
           transform: rotate(180deg);
         }
@@ -203,7 +202,6 @@
           border-radius: 4px;
           cursor: pointer;
           transition: all 0.2s ease;
-          flex-grow: 1; /* Allow label part to grow */
         }
 
         .setting-checkbox:hover {
@@ -355,7 +353,22 @@
           background: var(--hover-blue);
         }
 
-        /* Hide package info section but keep it in DOM for functionality */
+        /* Hide child settings initially */
+        .child-settings-container {
+            display: none;
+            margin-left: 20px; /* Indent child settings */
+            margin-top: 10px; /* Space below parent toggle */
+            padding-left: 15px; /* Further indent content */
+            border-left: 2px solid var(--border-gray); /* Visual cue */
+        }
+
+        .child-settings-container.active {
+            display: block;
+        }
+        .child-setting {
+            margin-bottom: 15px; /* Space between child settings */
+        }
+
         #package-info {
           display: none;
         }
@@ -396,14 +409,17 @@
             width: auto;
         }
 
+        /* String Array Editor (for empty arrays) & Directory List共通のスタイル調整 */
+        .string-array-editor,
         .directory-list-container {
             margin-bottom: 16px;
-            border-left: 4px solid #1a73e8;
+            border-left: 4px solid var(--primary-blue);
             padding-left: 12px;
             background: #f9f9f9;
             border-radius: 0 4px 4px 0;
         }
 
+        .string-array-editor-header, /* Changed class name */
         .directory-list-header {
             display: flex;
             justify-content: space-between;
@@ -411,42 +427,56 @@
             cursor: pointer;
             padding: 12px 0;
         }
-
-        .directory-name {
-            font-weight: 500;
-            color: #1a73e8;
+        .string-array-editor-header:hover,
+        .directory-list-header:hover {
+            background-color: #f0f0f0; /* Slight hover effect */
         }
 
+        .string-array-editor-name, /* Changed class name */
+        .directory-name {
+            font-weight: 500;
+            color: var(--primary-blue);
+            flex-grow: 1; /* Allow name to take space */
+        }
+
+        .string-array-options-count, /* Changed class name */
         .options-count {
             margin-left: 8px;
             color: #666;
             font-size: 14px;
+            white-space: nowrap;
         }
 
+        .string-array-dropdown-arrow, /* Changed class name */
         .dropdown-arrow {
             transition: transform 0.3s;
+            padding: 0 8px; /* Ensure clickable area */
         }
 
+        .string-array-dropdown-arrow.expanded, /* Changed class name */
         .dropdown-arrow.expanded {
             transform: rotate(180deg);
         }
 
+        .string-array-editor-content, /* Changed class name */
         .directory-list-content {
-            padding: 12px 0 12px 16px;
+            padding: 12px 0 12px 16px; /* Adjusted padding, was 12px 0 12px 0 for string-array-editor */
             display: none;
             border-top: 1px solid #eee;
             margin-top: 8px;
         }
 
+        .string-array-editor-content.active, /* Changed class name */
         .directory-list-content.active {
             display: block;
         }
 
+        .string-array-textarea, /* Changed class name */
         .directory-textarea {
             width: 100%;
             min-height: 100px;
             padding: 8px 12px;
-            border: 1px solid #dadce0;
+            border: 1px solid var(--border-gray);
             border-radius: 4px;
             font-size: 14px;
             font-family: monospace;
@@ -455,22 +485,25 @@
             box-sizing: border-box;
         }
 
+        .string-array-help-text, /* Changed class name */
         .directory-help-text {
             font-size: 12px;
             color: #666;
             margin-bottom: 12px;
         }
 
+        .string-array-buttons, /* Changed class name */
         .directory-buttons {
             display: flex;
             justify-content: flex-end;
             gap: 8px;
         }
 
+        .string-array-btn, /* Changed class name */
         .directory-btn {
             background: none;
             border: none;
-            color: #1a73e8;
+            color: var(--primary-blue);
             font-weight: 500;
             cursor: pointer;
             padding: 8px 12px;
@@ -478,172 +511,22 @@
             border-radius: 4px;
         }
 
+        .string-array-btn:hover, /* Changed class name */
         .directory-btn:hover {
             background-color: rgba(26, 115, 232, 0.1);
         }
 
+        .string-array-btn.primary, /* Changed class name */
         .directory-btn.primary {
-            background-color: #1a73e8;
+            background-color: var(--primary-blue);
             color: white;
         }
 
+        .string-array-btn.primary:hover, /* Changed class name */
         .directory-btn.primary:hover {
-            background-color: #0b5cad;
+            background-color: var(--hover-blue);
         }
 
-        /* Modal Styles */
-        .modal-overlay {
-          position: fixed;
-          top: 0;
-          left: 0;
-          width: 100%;
-          height: 100%;
-          background-color: rgba(0, 0, 0, 0.6);
-          display: none; /* Hidden by default */
-          justify-content: center;
-          align-items: center;
-          z-index: 2000;
-        }
-
-        .modal-content {
-          background-color: white;
-          padding: 25px;
-          border-radius: 8px;
-          box-shadow: 0 5px 20px rgba(0,0,0,0.25);
-          width: 90%;
-          max-width: 550px;
-          max-height: 85vh;
-          display: flex;
-          flex-direction: column;
-        }
-
-        .modal-header {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          border-bottom: 1px solid var(--border-gray);
-          padding-bottom: 12px;
-          margin-bottom: 18px;
-        }
-
-        .modal-header h3 {
-          margin: 0;
-          color: var(--primary-blue);
-          font-size: 20px;
-          font-weight: 500;
-        }
-
-        .modal-close-btn {
-          background: none;
-          border: none;
-          font-size: 28px;
-          font-weight: bold;
-          color: #aaa;
-          cursor: pointer;
-          padding: 0 5px;
-          line-height: 1;
-        }
-        .modal-close-btn:hover {
-          color: #333;
-        }
-
-        .modal-body {
-          overflow-y: auto;
-          flex-grow: 1;
-          padding-right: 10px; /* Space for scrollbar */
-        }
-
-        .modal-body .setting {
-          margin-bottom: 18px;
-        }
-        .modal-body .setting-label {
-          font-weight: 500;
-          margin-bottom: 6px;
-          color: #333;
-        }
-        .modal-body input[type="text"],
-        .modal-body input[type="number"],
-        .modal-body select {
-          width: 100%;
-          padding: 10px;
-          border: 1px solid var(--border-gray);
-          border-radius: 4px;
-          font-size: 14px;
-          box-sizing: border-box;
-        }
-        .modal-body .setting-checkbox {
-            padding: 10px;
-            background-color: var(--bg-gray);
-            border-radius: 4px;
-        }
-        .modal-body .setting-checkbox .toggle-label {
-            font-size: 14px; /* Slightly smaller for modal if needed */
-        }
-
-
-        .modal-footer {
-          border-top: 1px solid var(--border-gray);
-          padding-top: 15px;
-          margin-top: 20px;
-          display: flex;
-          justify-content: flex-end;
-          gap: 10px;
-        }
-
-        .modal-btn {
-          padding: 10px 20px;
-          border-radius: 4px;
-          border: 1px solid var(--border-gray);
-          cursor: pointer;
-          font-weight: 500;
-          font-size: 14px;
-          background-color: white;
-        }
-        .modal-btn.primary {
-          background-color: var(--primary-blue);
-          color: white;
-          border-color: var(--primary-blue);
-        }
-        .modal-btn.primary:hover {
-          background-color: var(--hover-blue);
-        }
-        .modal-btn:not(.primary):hover {
-          background-color: #f1f1f1;
-        }
-
-        .configure-child-btn {
-            margin-left: 10px;
-            padding: 7px 14px; /* Slightly larger */
-            font-size: 13px;
-            background-color: #e9ecef; /* Lighter gray */
-            border: 1px solid #ced4da;
-            color: #495057;
-            border-radius: 4px;
-            cursor: pointer;
-            transition: background-color 0.2s, border-color 0.2s;
-            white-space: nowrap;
-            flex-shrink: 0; /* Prevent shrinking */
-        }
-
-        .configure-child-btn:hover:not(:disabled) {
-            background-color: #dde2e6;
-            border-color: #b6bfc8;
-        }
-        .configure-child-btn:disabled {
-            opacity: 0.6;
-            cursor: not-allowed;
-        }
-
-        .parent-toggle-setting { /* This is the .setting div containing the toggle and button */
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-        }
-        /* Ensure the setting-checkbox (label wrapper) within parent-toggle-setting doesn't take all space */
-        .parent-toggle-setting > .setting-checkbox {
-            flex-grow: 1; /* Label part takes available space */
-            /* margin-right: 10px; /* Optional: space before button */
-        }
 
     </style>
 </head>
@@ -662,34 +545,16 @@
   <button class="save-btn" onclick="saveConfig()">Save Settings</button>
 </div>
 
-<div id="child-settings-modal" class="modal-overlay">
-    <div class="modal-content">
-        <div class="modal-header">
-            <h3 id="modal-title">Configure Details</h3>
-            <button type="button" class="modal-close-btn" aria-label="Close">&times;</button>
-        </div>
-        <div id="modal-body" class="modal-body">
-            <!-- Child settings will be dynamically inserted here -->
-        </div>
-        <div class="modal-footer">
-            <button type="button" id="modal-cancel-btn" class="modal-btn">Cancel</button>
-            <button type="button" id="modal-apply-btn" class="modal-btn primary">Apply</button>
-        </div>
-    </div>
-</div>
-
 <script>
 // Constants for API access
 const BIN_ID = '67fe9e1f8960c979a585d694';
 const API_KEY = '$2a$10$SgT4qoOKXP6CD4u1jPEpduwi.2NbrCqV2u71AaL7mGaW.77CmNU7u';
 
-const NON_INTERACTIVE_DIRECTORY_KEYS = ['stringsProperties'];
+const NON_INTERACTIVE_DIRECTORY_KEYS = ['stringsProperties','addActivities','addProviders','addReceivers','addServices','addPermissions'];
 
 let jsonConfig = {};
 let currentPackageName = "";
 let configFileSplitCount = 101;
-let currentModalContext = { parentKey: null, category: null, parentLabel: null };
-
 
 document.addEventListener('DOMContentLoaded', loadConfiguration);
 
@@ -739,7 +604,7 @@ function renderConfiguration(config) {
     container.innerHTML = '';
     Object.entries(config).forEach(([category, settings]) => {
         const filteredSettings = Object.fromEntries(
-            Object.entries(settings).filter(([key]) => !NON_INTERACTIVE_DIRECTORY_KEYS.includes(key))
+            Object.entries(settings).filter(([key]) => !NON_INTERACTIVE_DIRECTORY_KEYS.includes(key) && key !== 'fakeWifiNetworks')
         );
         if (Object.keys(filteredSettings).length > 0) {
             const categoryElement = createCategorySection(category, filteredSettings);
@@ -789,8 +654,25 @@ function createSettingElement(key, value, category, allSettingsInCategory) {
     const dataPath = `${category}.${key}`;
     const formattedLabel = formatLabel(key);
 
-    if (Array.isArray(value) && value.length > 0 && typeof value[0] === 'object' && value[0] !== null) {
-        // ... (Array of objects rendering - unchanged)
+    if (Array.isArray(value) && value.length === 0) { // Handle empty arrays specifically
+        setting.className = 'string-array-editor setting'; // Use new class
+        const uniqueId = `${category}-${key}-${Date.now()}`;
+        setting.innerHTML = `
+            <div class="string-array-editor-header" data-target-content="content-${uniqueId}" data-target-arrow="arrow-${uniqueId}">
+                <span class="string-array-editor-name">${formattedLabel}</span>
+                <span class="string-array-options-count" id="count-${uniqueId}">Options: 0</span>
+                <span class="string-array-dropdown-arrow chevron" id="arrow-${uniqueId}">⌵</span>
+            </div>
+            <div class="string-array-editor-content" id="content-${uniqueId}">
+                <textarea class="string-array-textarea" id="textarea-${uniqueId}" placeholder="Enter one item per line..."></textarea>
+                <p class="string-array-help-text">Each line will be treated as a separate string in the array.</p>
+                <div class="string-array-buttons">
+                    <button type="button" class="string-array-btn sae-cancel-btn" data-textarea-id="textarea-${uniqueId}" data-category="${category}" data-key="${key}" data-count-id="count-${uniqueId}" data-content-id="content-${uniqueId}" data-arrow-id="arrow-${uniqueId}">Cancel</button>
+                    <button type="button" class="string-array-btn primary sae-apply-btn" data-textarea-id="textarea-${uniqueId}" data-category="${category}" data-key="${key}" data-count-id="count-${uniqueId}" data-content-id="content-${uniqueId}" data-arrow-id="arrow-${uniqueId}">Apply</button>
+                </div>
+            </div>
+        `;
+    } else if (Array.isArray(value) && value.length > 0 && typeof value[0] === 'object' && value[0] !== null) {
         setting.className = 'setting-group';
         setting.innerHTML = `<h3>${formattedLabel}</h3>`;
         value.forEach((object, index) => {
@@ -814,7 +696,6 @@ function createSettingElement(key, value, category, allSettingsInCategory) {
             setting.appendChild(objectContainer);
         });
     } else if (typeof value === 'object' && value !== null && !Array.isArray(value) && Object.keys(value).some(k => !isNaN(parseInt(k)))) {
-        // ... (Object with numeric keys as SDK versions - unchanged)
         setting.className = 'setting-group';
         setting.innerHTML = `<h3>${formattedLabel}</h3>`;
         Object.entries(value).forEach(([objKey, objValue]) => {
@@ -835,7 +716,6 @@ function createSettingElement(key, value, category, allSettingsInCategory) {
             }
         });
     } else if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
-        // ... (Simple object rendering - unchanged)
         setting.className = 'setting-group';
         setting.innerHTML = `<h3>${formattedLabel}</h3>`;
         Object.entries(value).forEach(([objKey, objValue]) => {
@@ -869,8 +749,7 @@ function createSettingElement(key, value, category, allSettingsInCategory) {
             }
             setting.appendChild(fieldDiv);
         });
-    } else if (Array.isArray(value)) {
-        // ... (Array of primitives / select rendering - unchanged)
+    } else if (Array.isArray(value)) { // This now handles non-empty arrays of primitives
         setting.className = 'array-field setting';
         const isIdentitySetting = key.startsWith('change') &&
             (key.includes('Id') || key.includes('Mac') || key.includes('Imei') ||
@@ -897,18 +776,7 @@ function createSettingElement(key, value, category, allSettingsInCategory) {
               ''}
         `;
     } else if (typeof value === 'boolean') {
-        setting.className = 'setting parent-toggle-setting'; // Added class for flex layout
-        let hasChildSettings = false;
-        for (const childKey in allSettingsInCategory) {
-            if (childKey.startsWith(key) && childKey !== key) {
-                 const suffix = childKey.substring(key.length);
-                 if (suffix && (suffix[0] === suffix[0].toUpperCase() || !isNaN(parseInt(suffix[0])) || suffix === 'Value' )) {
-                    hasChildSettings = true;
-                    break;
-                 }
-            }
-        }
-
+        setting.className = 'setting';
         setting.innerHTML = `
             <label class="setting-checkbox">
                 <input type="checkbox" data-path="${dataPath}" data-key="${key}" ${value ? 'checked' : ''}>
@@ -916,11 +784,27 @@ function createSettingElement(key, value, category, allSettingsInCategory) {
                 <span class="toggle-label">${formattedLabel}</span>
                 <span class="toggle-status">${value ? 'Enabled' : 'Disabled'}</span>
             </label>
-            ${hasChildSettings ? `<button type="button" class="configure-child-btn" data-parent-key="${key}" data-category="${category}" data-parent-label="${formattedLabel}" ${!value ? 'disabled' : ''}>Configure</button>` : ''}
         `;
-        // Child settings container is no longer rendered here.
+        const childSettingsContainer = document.createElement('div');
+        childSettingsContainer.className = 'child-settings-container';
+        childSettingsContainer.dataset.parentKey = key; // For targeting by parent toggle
+        for (const childKey in allSettingsInCategory) {
+            if (childKey.startsWith(key) && childKey !== key) {
+                 const suffix = childKey.substring(key.length);
+                 if (suffix && (suffix[0] === suffix[0].toUpperCase() || !isNaN(parseInt(suffix[0])) || suffix === 'Value' )) {
+                    const childValue = allSettingsInCategory[childKey];
+                    const childSettingElement = createSettingElement(childKey, childValue, category, allSettingsInCategory);
+                    if (childSettingElement) {
+                        childSettingElement.classList.add('child-setting');
+                        childSettingsContainer.appendChild(childSettingElement);
+                    }
+                 }
+            }
+        }
+        if (childSettingsContainer.hasChildNodes()) {
+            setting.appendChild(childSettingsContainer);
+        }
     } else if (typeof value === 'number' && (key.includes('Battery') || key.includes('battery') || key.includes('Level'))) {
-        // ... (Slider rendering - unchanged)
         setting.className = 'setting';
         let min = 0, max = 100, step = 1, unit = '%';
         if (key.includes('Temp')) { min = -20; max = 80; unit = '°C'; }
@@ -933,14 +817,12 @@ function createSettingElement(key, value, category, allSettingsInCategory) {
             </div>
         `;
     } else if (typeof value === 'number') {
-        // ... (Number input - unchanged)
         setting.className = 'setting';
         setting.innerHTML = `
             <label class="setting-label">${formattedLabel}</label>
             <input type="number" data-path="${dataPath}" data-key="${key}" value="${value}">
         `;
     } else { // Default: Text Input
-        // ... (Text input - unchanged)
         setting.className = 'setting';
         setting.innerHTML = `
             <label class="setting-label">${formattedLabel}</label>
@@ -951,7 +833,6 @@ function createSettingElement(key, value, category, allSettingsInCategory) {
 }
 
 function generateRandomValue(settingKey) {
-    // ... (Unchanged)
     const keyLower = settingKey.toLowerCase();
     const hex = () => Math.floor(Math.random() * 16).toString(16);
     const generateUUID = () => `${Array.from({length: 8}, hex).join('')}-${Array.from({length: 4}, hex).join('')}-4${Array.from({length: 3}, hex).join('')}-${['8','9','a','b'][Math.floor(Math.random()*4)]}${Array.from({length: 3}, hex).join('')}-${Array.from({length: 12}, hex).join('')}`;
@@ -997,8 +878,69 @@ function initializeEventListeners() {
             return;
         }
 
+        const saeHeader = event.target.closest('.string-array-editor-header');
+        if (saeHeader) {
+            const contentId = saeHeader.dataset.targetContent;
+            const arrowId = saeHeader.dataset.targetArrow;
+            const contentElement = document.getElementById(contentId);
+            const arrowElement = document.getElementById(arrowId);
+            if (contentElement && arrowElement) {
+                contentElement.classList.toggle('active');
+                arrowElement.classList.toggle('expanded');
+            }
+            return;
+        }
+        
+        if (event.target.classList.contains('sae-apply-btn')) {
+            const btn = event.target;
+            const textareaId = btn.dataset.textareaId;
+            const category = btn.dataset.category;
+            const key = btn.dataset.key;
+            const countId = btn.dataset.countId;
+            const contentId = btn.dataset.contentId;
+            const arrowId = btn.dataset.arrowId;
+
+            const textarea = document.getElementById(textareaId);
+            const countElement = document.getElementById(countId);
+            const contentElement = document.getElementById(contentId);
+            const arrowElement = document.getElementById(arrowId);
+
+            if (textarea && jsonConfig[category] && Object.hasOwnProperty.call(jsonConfig[category], key)) {
+                const lines = textarea.value.split('\n').map(line => line.trim()).filter(line => line !== '');
+                jsonConfig[category][key] = lines;
+                if (countElement) countElement.textContent = `Options: ${lines.length}`;
+                if (contentElement) contentElement.classList.remove('active');
+                if (arrowElement) arrowElement.classList.remove('expanded');
+            }
+            return;
+        }
+
+        if (event.target.classList.contains('sae-cancel-btn')) {
+            const btn = event.target;
+            const textareaId = btn.dataset.textareaId;
+            const category = btn.dataset.category;
+            const key = btn.dataset.key;
+            const countId = btn.dataset.countId;
+            const contentId = btn.dataset.contentId;
+            const arrowId = btn.dataset.arrowId;
+
+            const textarea = document.getElementById(textareaId);
+            const countElement = document.getElementById(countId);
+            const contentElement = document.getElementById(contentId);
+            const arrowElement = document.getElementById(arrowId);
+            
+            if (textarea) textarea.value = ''; // Reset textarea
+            if (jsonConfig[category] && Object.hasOwnProperty.call(jsonConfig[category], key)) {
+                 // Reset to current (likely empty) config value for count
+                if (countElement) countElement.textContent = `Options: ${jsonConfig[category][key].length}`;
+            }
+            if (contentElement) contentElement.classList.remove('active');
+            if (arrowElement) arrowElement.classList.remove('expanded');
+            return;
+        }
+
+
         if (event.target.classList.contains('generate-btn')) {
-            // ... (Unchanged)
             event.preventDefault();
             const button = event.target;
             const targetInputId = button.dataset.targetInput;
@@ -1011,12 +953,6 @@ function initializeEventListeners() {
             }
             return;
         }
-
-        if (event.target.classList.contains('configure-child-btn')) {
-            const btn = event.target;
-            openChildSettingsModal(btn.dataset.parentKey, btn.dataset.category, btn.dataset.parentLabel);
-            return;
-        }
     });
 
     container.addEventListener('change', function(event) {
@@ -1024,18 +960,17 @@ function initializeEventListeners() {
             const checkbox = event.target;
             const statusElement = checkbox.parentElement.querySelector('.toggle-status');
             if (statusElement) statusElement.textContent = checkbox.checked ? 'Enabled' : 'Disabled';
-
-            // If this checkbox is a parent toggle, enable/disable its configure button
-            const parentSettingDiv = checkbox.closest('.parent-toggle-setting');
-            if (parentSettingDiv) {
-                const configureBtn = parentSettingDiv.querySelector('.configure-child-btn');
-                if (configureBtn) {
-                    configureBtn.disabled = !checkbox.checked;
-                }
+            
+            const parentKey = checkbox.dataset.key; // This is the key of the parent toggle itself
+            const settingDiv = checkbox.closest('.setting'); // The div wrapping the toggle
+            if (settingDiv) {
+                const childSettingsContainer = settingDiv.querySelector(`.child-settings-container[data-parent-key="${parentKey}"]`);
+                 if (childSettingsContainer) {
+                    childSettingsContainer.classList.toggle('active', checkbox.checked);
+                 }
             }
         }
         if (event.target.tagName === 'SELECT') {
-            // ... (Unchanged select logic for custom values)
             const select = event.target;
             const customContainer = select.parentElement.querySelector('.custom-input-container');
             if (customContainer) {
@@ -1051,7 +986,6 @@ function initializeEventListeners() {
 
      container.addEventListener('input', function(event) {
          if (event.target.type === 'range') {
-            // ... (Unchanged slider logic)
             const slider = event.target;
             const sliderContainer = slider.closest('.slider-container');
             if (sliderContainer) {
@@ -1071,138 +1005,14 @@ function initializeEventListeners() {
          }
      });
 
-    // Initialize configure buttons state based on checkboxes
-    container.querySelectorAll('.parent-toggle-setting input[type="checkbox"]').forEach(checkbox => {
-        const parentSettingDiv = checkbox.closest('.parent-toggle-setting');
-        if (parentSettingDiv) {
-            const configureBtn = parentSettingDiv.querySelector('.configure-child-btn');
-            if (configureBtn) {
-                configureBtn.disabled = !checkbox.checked;
-            }
-        }
-    });
+    // Trigger initial state for child containers and selects
+    container.querySelectorAll('input[type="checkbox"]').forEach(checkbox => checkbox.dispatchEvent(new Event('change', { bubbles: true })));
     container.querySelectorAll('.array-field select').forEach(select => select.dispatchEvent(new Event('change', { bubbles: true })));
     container.querySelectorAll('input[type="range"]').forEach(slider => slider.dispatchEvent(new Event('input', { bubbles: true })));
-
-    // Modal event listeners
-    document.getElementById('modal-apply-btn').addEventListener('click', applyModalChanges);
-    document.getElementById('modal-cancel-btn').addEventListener('click', closeChildSettingsModal);
-    document.querySelector('#child-settings-modal .modal-close-btn').addEventListener('click', closeChildSettingsModal);
-    document.getElementById('child-settings-modal').addEventListener('click', function(event) {
-        if (event.target === this) { // Click on overlay itself
-            closeChildSettingsModal();
-        }
-    });
-
-}
-
-function openChildSettingsModal(parentKey, category, parentLabel) {
-    currentModalContext = { parentKey, category, parentLabel };
-    const modal = document.getElementById('child-settings-modal');
-    const modalTitle = document.getElementById('modal-title');
-    const modalBody = document.getElementById('modal-body');
-
-    modalTitle.textContent = `Configure: ${parentLabel || formatLabel(parentKey)}`;
-    modalBody.innerHTML = ''; // Clear previous content
-
-    const settingsInCategory = jsonConfig[category];
-    if (!settingsInCategory) {
-        console.error(`Category ${category} not found in jsonConfig`);
-        modalBody.innerHTML = '<p>Error: Configuration data not found for this category.</p>';
-        modal.style.display = 'flex';
-        return;
-    }
-
-    let foundChildren = false;
-    for (const childKey in settingsInCategory) {
-        if (childKey.startsWith(parentKey) && childKey !== parentKey) {
-            const suffix = childKey.substring(parentKey.length);
-            if (suffix && (suffix[0] === suffix[0].toUpperCase() || !isNaN(parseInt(suffix[0])) || suffix === 'Value')) {
-                foundChildren = true;
-                const childValue = settingsInCategory[childKey];
-                const childElement = createModalInputElement(childKey, childValue, category);
-                if (childElement) {
-                    modalBody.appendChild(childElement);
-                }
-            }
-        }
-    }
-    if (!foundChildren) {
-        modalBody.innerHTML = '<p>No configurable child settings found.</p>';
-    }
-    modal.style.display = 'flex';
-}
-
-function createModalInputElement(childKey, childValue, category) {
-    const settingDiv = document.createElement('div');
-    settingDiv.className = 'setting'; // Re-use .setting for basic structure
-    const formattedChildLabel = formatLabel(childKey.substring(currentModalContext.parentKey.length)); // Get label for suffix
-
-    if (typeof childValue === 'boolean') {
-        settingDiv.innerHTML = `
-            <label class="setting-checkbox">
-                <input type="checkbox" data-modal-key="${childKey}" ${childValue ? 'checked' : ''}>
-                <span class="checkmark"></span>
-                <span class="toggle-label">${formattedChildLabel}</span>
-                <span class="toggle-status">${childValue ? 'Enabled' : 'Disabled'}</span>
-            </label>
-        `;
-        // Add change listener for modal toggles' status text
-        const modalCheckbox = settingDiv.querySelector('input[type="checkbox"]');
-        modalCheckbox.addEventListener('change', function() {
-            const statusEl = this.parentElement.querySelector('.toggle-status');
-            if (statusEl) statusEl.textContent = this.checked ? 'Enabled' : 'Disabled';
-        });
-
-    } else if (typeof childValue === 'number') {
-        settingDiv.innerHTML = `
-            <label class="setting-label" for="modal-input-${childKey}">${formattedChildLabel}</label>
-            <input type="number" id="modal-input-${childKey}" data-modal-key="${childKey}" value="${childValue}">
-        `;
-    } else { // Default to text
-        settingDiv.innerHTML = `
-            <label class="setting-label" for="modal-input-${childKey}">${formattedChildLabel}</label>
-            <input type="text" id="modal-input-${childKey}" data-modal-key="${childKey}" value="${childValue || ''}">
-        `;
-    }
-    return settingDiv;
-}
-
-function applyModalChanges() {
-    const { category } = currentModalContext;
-    if (!category || !jsonConfig[category]) {
-        console.error("Cannot apply modal changes: invalid context or category.");
-        closeChildSettingsModal();
-        return;
-    }
-
-    const modalBody = document.getElementById('modal-body');
-    modalBody.querySelectorAll('[data-modal-key]').forEach(inputEl => {
-        const childKey = inputEl.dataset.modalKey;
-        let newValue;
-        if (inputEl.type === 'checkbox') {
-            newValue = inputEl.checked;
-        } else if (inputEl.type === 'number') {
-            newValue = parseFloat(inputEl.value) || 0;
-        } else {
-            newValue = inputEl.value;
-        }
-        if (Object.hasOwnProperty.call(jsonConfig[category], childKey)) {
-            jsonConfig[category][childKey] = newValue;
-        }
-    });
-    closeChildSettingsModal();
-}
-
-function closeChildSettingsModal() {
-    const modal = document.getElementById('child-settings-modal');
-    modal.style.display = 'none';
-    currentModalContext = { parentKey: null, category: null, parentLabel: null };
 }
 
 
 function getUpdatedConfig() {
-    // ... (Unchanged)
     const updatedConfigStructured = JSON.parse(JSON.stringify(jsonConfig));
     const processedCustomFields = new Set();
 
@@ -1217,44 +1027,41 @@ function getUpdatedConfig() {
                         continue;
                     }
 
+                    // For empty arrays handled by string-array-editor, jsonConfig is already updated.
+                    // So, they will be correctly part of updatedConfigStructured here.
+                    // No specific DOM reading needed for them here.
+
                     if (typeof settings[key] === 'object' && settings[key] !== null && !Array.isArray(settings[key])) {
-                        // This handles simple objects and SDK-version-like objects.
-                        // Child settings modified by the modal are already in jsonConfig,
-                        // so they will be correctly part of updatedConfigStructured here.
-                        // This part mainly updates non-child object properties if they have UI.
                         const objectKeys = Object.keys(settings[key]);
                         const newObject = {};
-                        let objectUpdated = false;
+                        // let objectUpdated = false; // Not strictly needed as we always assign newObject
                         objectKeys.forEach(objKey => {
-                            // Only update from DOM if it's NOT a child setting that was handled by modal
-                            // This check is a bit indirect. Better to rely on jsonConfig being authoritative for modal-edited children.
-                            // For non-boolean parent objects, their fields are directly on the page.
                             const objElement = document.querySelector(`[data-path="${dataPath}.${objKey}"]`);
-                            if (objElement) { // Element exists on main page
+                            if (objElement) {
                                 let value;
                                 if (objElement.type === 'checkbox') value = objElement.checked;
                                 else if (objElement.type === 'number' || objElement.type === 'range') value = parseFloat(objElement.value) || 0;
                                 else value = objElement.value;
                                 newObject[objKey] = value;
-                                objectUpdated = true;
-                            } else { // No direct UI element, so take from (potentially modal-updated) jsonConfig
+                                // objectUpdated = true;
+                            } else { // Not found in DOM, assume it's part of jsonConfig (e.g. child setting)
                                 newObject[objKey] = settings[key][objKey];
                             }
                         });
-                         updatedConfigStructured[category][key] = newObject; // Always assign, as children might have changed via modal
+                        updatedConfigStructured[category][key] = newObject;
                         continue;
                     }
 
                     const element = document.querySelector(`[data-path="${dataPath}"][data-key="${key}"]`);
                     if (!element) {
-                        // This could be a boolean parent whose children were edited in modal.
-                        // The parent's own boolean value is still read from its checkbox.
+                        // Could be a boolean parent whose children were handled by createSettingElement's recursion
+                        // or an empty array handled by string-array-editor (already in jsonConfig)
                         const checkboxElement = document.querySelector(`input[type="checkbox"][data-path="${dataPath}"][data-key="${key}"]`);
-                        if (checkboxElement) {
+                        if (checkboxElement) { // This is the parent boolean itself
                             updatedConfigStructured[category][key] = checkboxElement.checked;
                         }
-                        // If it's neither a direct element nor a known checkbox, it's likely a child handled by modal
-                        // or a non-interactive key, already correctly in updatedConfigStructured from jsonConfig.
+                        // If not a direct element or a known checkbox, it means its value is already set in jsonConfig
+                        // (e.g. child elements, or string-array-editor updated arrays)
                         continue;
                     }
 
@@ -1328,7 +1135,6 @@ function getUpdatedConfig() {
 
 
 function saveConfig() {
-    // ... (Unchanged)
     let packageName = currentPackageName;
     if (!packageName) {
         packageName = prompt("Package name not detected. Please enter the package name to encrypt the configuration:");
