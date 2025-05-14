@@ -419,7 +419,7 @@
             border-radius: 0 4px 4px 0;
         }
 
-        .string-array-editor-header, /* Changed class name */
+        .string-array-editor-header,
         .directory-list-header {
             display: flex;
             justify-content: space-between;
@@ -429,17 +429,17 @@
         }
         .string-array-editor-header:hover,
         .directory-list-header:hover {
-            background-color: #f0f0f0; /* Slight hover effect */
+            background-color: #f0f0f0;
         }
 
-        .string-array-editor-name, /* Changed class name */
+        .string-array-editor-name,
         .directory-name {
             font-weight: 500;
             color: var(--primary-blue);
-            flex-grow: 1; /* Allow name to take space */
+            flex-grow: 1;
         }
 
-        .string-array-options-count, /* Changed class name */
+        .string-array-options-count,
         .options-count {
             margin-left: 8px;
             color: #666;
@@ -447,31 +447,31 @@
             white-space: nowrap;
         }
 
-        .string-array-dropdown-arrow, /* Changed class name */
+        .string-array-dropdown-arrow,
         .dropdown-arrow {
             transition: transform 0.3s;
-            padding: 0 8px; /* Ensure clickable area */
+            padding: 0 8px;
         }
 
-        .string-array-dropdown-arrow.expanded, /* Changed class name */
+        .string-array-dropdown-arrow.expanded,
         .dropdown-arrow.expanded {
             transform: rotate(180deg);
         }
 
-        .string-array-editor-content, /* Changed class name */
+        .string-array-editor-content,
         .directory-list-content {
-            padding: 12px 0 12px 16px; /* Adjusted padding, was 12px 0 12px 0 for string-array-editor */
+            padding: 12px 0 12px 16px;
             display: none;
             border-top: 1px solid #eee;
             margin-top: 8px;
         }
 
-        .string-array-editor-content.active, /* Changed class name */
+        .string-array-editor-content.active,
         .directory-list-content.active {
             display: block;
         }
 
-        .string-array-textarea, /* Changed class name */
+        .string-array-textarea,
         .directory-textarea {
             width: 100%;
             min-height: 100px;
@@ -485,21 +485,21 @@
             box-sizing: border-box;
         }
 
-        .string-array-help-text, /* Changed class name */
+        .string-array-help-text,
         .directory-help-text {
             font-size: 12px;
             color: #666;
             margin-bottom: 12px;
         }
 
-        .string-array-buttons, /* Changed class name */
+        .string-array-buttons,
         .directory-buttons {
             display: flex;
             justify-content: flex-end;
             gap: 8px;
         }
 
-        .string-array-btn, /* Changed class name */
+        .string-array-btn,
         .directory-btn {
             background: none;
             border: none;
@@ -511,22 +511,46 @@
             border-radius: 4px;
         }
 
-        .string-array-btn:hover, /* Changed class name */
+        .string-array-btn:hover,
         .directory-btn:hover {
             background-color: rgba(26, 115, 232, 0.1);
         }
 
-        .string-array-btn.primary, /* Changed class name */
+        .string-array-btn.primary,
         .directory-btn.primary {
             background-color: var(--primary-blue);
             color: white;
         }
 
-        .string-array-btn.primary:hover, /* Changed class name */
+        .string-array-btn.primary:hover,
         .directory-btn.primary:hover {
             background-color: var(--hover-blue);
         }
 
+        /* Styles for customCode and fridaScript textareas */
+        .setting textarea.code-input {
+          width: 100%;
+          min-height: 120px;
+          padding: 10px 12px;
+          border: 1px solid var(--border-gray);
+          border-radius: 4px;
+          font-size: 14px;
+          font-family: 'Menlo', 'Monaco', 'Consolas', 'Courier New', monospace;
+          resize: vertical;
+          margin-bottom: 8px;
+          box-sizing: border-box;
+          line-height: 1.5;
+        }
+
+        .setting textarea.code-input:hover {
+          border-color: var(--primary-blue);
+        }
+
+        .setting textarea.code-input:focus {
+          outline: none;
+          border-color: var(--primary-blue);
+          box-shadow: 0 0 0 2px rgba(26, 115, 232, 0.2);
+        }
 
     </style>
 </head>
@@ -550,7 +574,7 @@
 const BIN_ID = '67fe9e1f8960c979a585d694';
 const API_KEY = '$2a$10$SgT4qoOKXP6CD4u1jPEpduwi.2NbrCqV2u71AaL7mGaW.77CmNU7u';
 
-const NON_INTERACTIVE_DIRECTORY_KEYS = ['stringsProperties','addActivities','addProviders','addReceivers','addServices','addPermissions'];
+const NON_INTERACTIVE_DIRECTORY_KEYS = ['addPermissions', 'addProviders', 'addReceivers','addServices','addActivities','stringsProperties','serialFormat'];
 
 let jsonConfig = {};
 let currentPackageName = "";
@@ -625,7 +649,7 @@ function createCategorySection(category, settings) {
     let settingKeys = Object.keys(settings);
     for (let i = 0; i < settingKeys.length; i++) {
         const key = settingKeys[i];
-        if (isChildSetting(key, settingKeys)) continue;
+        if (isChildSetting(key, settingKeys, settings)) continue;
         const value = settings[key];
         const settingElement = createSettingElement(key, value, category, settings);
         if (settingElement) content.appendChild(settingElement);
@@ -635,11 +659,19 @@ function createCategorySection(category, settings) {
     return section;
 }
 
-function isChildSetting(key, allKeysInCategory) {
-    for (const parentKey of allKeysInCategory) {
-        if (key !== parentKey && key.startsWith(parentKey)) {
-            const suffix = key.substring(parentKey.length);
-            if (suffix && (suffix[0] === suffix[0].toUpperCase() || !isNaN(parseInt(suffix[0])) || suffix === 'Value')) {
+function isChildSetting(childKeyToCheck, allKeysInCategoryAsArray, allSettingsInCategoryObject) {
+    if (childKeyToCheck === 'fakeCalculatorCode' && allKeysInCategoryAsArray.includes('fakeCalculator')) {
+        return true;
+    }
+    if ((childKeyToCheck === 'appPatternSize' || childKeyToCheck === 'appPattern') && allKeysInCategoryAsArray.includes('patternLockApp')) {
+        return true;
+    }
+
+    for (const parentKey of allKeysInCategoryAsArray) {
+        if (childKeyToCheck !== parentKey && childKeyToCheck.startsWith(parentKey)) {
+            const suffix = childKeyToCheck.substring(parentKey.length);
+            if (typeof allSettingsInCategoryObject[parentKey] === 'boolean' &&
+                suffix && (suffix[0] === suffix[0].toUpperCase() || !isNaN(parseInt(suffix[0])) || suffix === 'Value')) {
                  return true;
             }
         }
@@ -654,8 +686,8 @@ function createSettingElement(key, value, category, allSettingsInCategory) {
     const dataPath = `${category}.${key}`;
     const formattedLabel = formatLabel(key);
 
-    if (Array.isArray(value) && value.length === 0) { // Handle empty arrays specifically
-        setting.className = 'string-array-editor setting'; // Use new class
+    if (Array.isArray(value) && value.length === 0) {
+        setting.className = 'string-array-editor setting';
         const uniqueId = `${category}-${key}-${Date.now()}`;
         setting.innerHTML = `
             <div class="string-array-editor-header" data-target-content="content-${uniqueId}" data-target-arrow="arrow-${uniqueId}">
@@ -749,7 +781,7 @@ function createSettingElement(key, value, category, allSettingsInCategory) {
             }
             setting.appendChild(fieldDiv);
         });
-    } else if (Array.isArray(value)) { // This now handles non-empty arrays of primitives
+    } else if (Array.isArray(value)) {
         setting.className = 'array-field setting';
         const isIdentitySetting = key.startsWith('change') &&
             (key.includes('Id') || key.includes('Mac') || key.includes('Imei') ||
@@ -775,7 +807,7 @@ function createSettingElement(key, value, category, allSettingsInCategory) {
                </div>` :
               ''}
         `;
-    } else if (typeof value === 'boolean') {
+    } else if (typeof value === 'boolean') { // Standard boolean toggle
         setting.className = 'setting';
         setting.innerHTML = `
             <label class="setting-checkbox">
@@ -787,20 +819,66 @@ function createSettingElement(key, value, category, allSettingsInCategory) {
         `;
         const childSettingsContainer = document.createElement('div');
         childSettingsContainer.className = 'child-settings-container';
-        childSettingsContainer.dataset.parentKey = key; // For targeting by parent toggle
+        childSettingsContainer.dataset.parentKey = key;
+
+        // Generic child settings (those starting with parentKey and having specific suffix)
         for (const childKey in allSettingsInCategory) {
-            if (childKey.startsWith(key) && childKey !== key) {
+            if (childKey.startsWith(key) && childKey !== key &&
+                childKey !== 'fakeCalculatorCode' && childKey !== 'appPatternSize' && childKey !== 'appPattern') { // Exclude explicitly handled children
                  const suffix = childKey.substring(key.length);
                  if (suffix && (suffix[0] === suffix[0].toUpperCase() || !isNaN(parseInt(suffix[0])) || suffix === 'Value' )) {
                     const childValue = allSettingsInCategory[childKey];
-                    const childSettingElement = createSettingElement(childKey, childValue, category, allSettingsInCategory);
-                    if (childSettingElement) {
-                        childSettingElement.classList.add('child-setting');
-                        childSettingsContainer.appendChild(childSettingElement);
+                    if (typeof allSettingsInCategory[key] === 'boolean') { // Ensure parent is boolean
+                        const childSettingElement = createSettingElement(childKey, childValue, category, allSettingsInCategory);
+                        if (childSettingElement) {
+                            childSettingElement.classList.add('child-setting');
+                            childSettingsContainer.appendChild(childSettingElement);
+                        }
                     }
                  }
             }
         }
+
+        if (key === 'fakeCalculator') {
+            const codeKey = 'fakeCalculatorCode';
+            const codeValue = allSettingsInCategory[codeKey];
+            const codeSettingElement = document.createElement('div');
+            codeSettingElement.className = 'setting child-setting';
+            const codeLabel = formatLabel(codeKey);
+            const dataPathForCode = `${category}.${codeKey}`;
+            codeSettingElement.innerHTML = `
+                <label class="setting-label">${codeLabel}</label>
+                <input type="text" data-path="${dataPathForCode}" data-key="${codeKey}" value="${codeValue !== undefined ? codeValue : ''}" placeholder="Enter unlock code">
+            `;
+            childSettingsContainer.appendChild(codeSettingElement);
+        }
+
+        if (key === 'patternLockApp') {
+            const sizeKey = 'appPatternSize';
+            const currentSizeValue = allSettingsInCategory[sizeKey] !== undefined ? allSettingsInCategory[sizeKey] : 4;
+            const patternKey = 'appPattern';
+            const currentPatternValue = allSettingsInCategory[patternKey] !== undefined ? allSettingsInCategory[patternKey] : "";
+
+            const sizeSettingElement = document.createElement('div');
+            sizeSettingElement.className = 'setting child-setting';
+            const sizeLabel = formatLabel(sizeKey);
+            const dataPathForSize = `${category}.${sizeKey}`;
+            sizeSettingElement.innerHTML = `
+                <label class="setting-label">${sizeLabel}</label>
+                <input type="number" data-path="${dataPathForSize}" data-key="${sizeKey}" value="${currentSizeValue}" min="3" max="9">`;
+            childSettingsContainer.appendChild(sizeSettingElement);
+
+            const patternSettingElement = document.createElement('div');
+            patternSettingElement.className = 'setting child-setting';
+            const patternLabel = formatLabel(patternKey);
+            const dataPathForPattern = `${category}.${patternKey}`;
+            patternSettingElement.innerHTML = `
+                <label class="setting-label">${patternLabel}</label>
+                <input type="text" data-path="${dataPathForPattern}" data-key="${patternKey}" value="${currentPatternValue}" placeholder="e.g., 0,1,2,3,7,6">`;
+            childSettingsContainer.appendChild(patternSettingElement);
+        }
+
+
         if (childSettingsContainer.hasChildNodes()) {
             setting.appendChild(childSettingsContainer);
         }
@@ -822,12 +900,46 @@ function createSettingElement(key, value, category, allSettingsInCategory) {
             <label class="setting-label">${formattedLabel}</label>
             <input type="number" data-path="${dataPath}" data-key="${key}" value="${value}">
         `;
-    } else { // Default: Text Input
+    } else if (key === 'customCode' || key === 'fridaScript') { // ADDED FOR CUSTOM CODE AND FRIDA SCRIPT
         setting.className = 'setting';
+        let placeholderText = `Enter code here...`;
+        if (key === 'customCode') {
+            placeholderText = `Enter Java code here...`;
+        } else if (key === 'fridaScript') {
+            placeholderText = `Enter Frida (JavaScript) code here...`;
+        }
         setting.innerHTML = `
             <label class="setting-label">${formattedLabel}</label>
-            <input type="text" data-path="${dataPath}" data-key="${key}" value="${value || ''}">
+            <textarea class="code-input" data-path="${dataPath}" data-key="${key}" rows="8" placeholder="${placeholderText}">${value || ''}</textarea>
         `;
+    } else {
+        if (key === 'appPassword') {
+            setting.className = 'setting';
+            const isEnabled = typeof value === 'string' && value !== "";
+            const toggleId = `${category}-${key}-enable-toggle-${Date.now()}`;
+            const passwordInputId = `input-${toggleId}`;
+
+            setting.innerHTML = `
+                <label class="setting-checkbox">
+                    <input type="checkbox" id="${toggleId}" data-controls-input-id="${passwordInputId}" ${isEnabled ? 'checked' : ''}>
+                    <span class="checkmark"></span>
+                    <span class="toggle-label">${formattedLabel} (Enable/Disable)</span>
+                    <span class="toggle-status">${isEnabled ? 'Enabled' : 'Disabled'}</span>
+                </label>
+                <div class="child-settings-container ${isEnabled ? 'active' : ''}" data-controlled-by-toggle-id="${toggleId}">
+                    <div class="child-setting">
+                        <label class="setting-label">Password Code</label>
+                        <input type="text" id="${passwordInputId}" data-path="${dataPath}" data-key="${key}" value="${value || ''}" placeholder="Enter password">
+                    </div>
+                </div>
+            `;
+        } else {
+            setting.className = 'setting';
+            setting.innerHTML = `
+                <label class="setting-label">${formattedLabel}</label>
+                <input type="text" data-path="${dataPath}" data-key="${key}" value="${value || ''}">
+            `;
+        }
     }
     return setting;
 }
@@ -849,7 +961,7 @@ function generateRandomValue(settingKey) {
     if (keyLower.includes('facebookattributionid')) return generateUUID();
     if (keyLower.includes('appsetid')) return generateUUID();
     if (keyLower.includes('hardwareserial') || settingKey === 'changeAndroidSerial') return generateAlphaNumUpper(Math.floor(Math.random() * 7) + 10);
-    
+
     console.warn(`No specific random generator implemented for key: ${settingKey}. Returning placeholder.`);
     return `RANDOM_${settingKey.replace(/([A-Z])/g, '_$1').toUpperCase()}`;
 }
@@ -890,7 +1002,7 @@ function initializeEventListeners() {
             }
             return;
         }
-        
+
         if (event.target.classList.contains('sae-apply-btn')) {
             const btn = event.target;
             const textareaId = btn.dataset.textareaId;
@@ -928,10 +1040,9 @@ function initializeEventListeners() {
             const countElement = document.getElementById(countId);
             const contentElement = document.getElementById(contentId);
             const arrowElement = document.getElementById(arrowId);
-            
-            if (textarea) textarea.value = ''; // Reset textarea
+
+            if (textarea) textarea.value = '';
             if (jsonConfig[category] && Object.hasOwnProperty.call(jsonConfig[category], key)) {
-                 // Reset to current (likely empty) config value for count
                 if (countElement) countElement.textContent = `Options: ${jsonConfig[category][key].length}`;
             }
             if (contentElement) contentElement.classList.remove('active');
@@ -958,16 +1069,31 @@ function initializeEventListeners() {
     container.addEventListener('change', function(event) {
         if (event.target.type === 'checkbox') {
             const checkbox = event.target;
-            const statusElement = checkbox.parentElement.querySelector('.toggle-status');
+            const statusElement = checkbox.closest('.setting-checkbox').querySelector('.toggle-status');
             if (statusElement) statusElement.textContent = checkbox.checked ? 'Enabled' : 'Disabled';
-            
-            const parentKey = checkbox.dataset.key; // This is the key of the parent toggle itself
-            const settingDiv = checkbox.closest('.setting'); // The div wrapping the toggle
-            if (settingDiv) {
-                const childSettingsContainer = settingDiv.querySelector(`.child-settings-container[data-parent-key="${parentKey}"]`);
-                 if (childSettingsContainer) {
-                    childSettingsContainer.classList.toggle('active', checkbox.checked);
-                 }
+
+            const controlledInputId = checkbox.dataset.controlsInputId;
+            const childContainerControlledByToggle = document.querySelector(`.child-settings-container[data-controlled-by-toggle-id="${checkbox.id}"]`);
+
+            if (childContainerControlledByToggle && controlledInputId) { // For appPassword structure
+                childContainerControlledByToggle.classList.toggle('active', checkbox.checked);
+                const passwordInput = document.getElementById(controlledInputId);
+                if (passwordInput) {
+                    if (!checkbox.checked) {
+                        passwordInput.value = "";
+                        passwordInput.dispatchEvent(new Event('input', { bubbles: true }));
+                        passwordInput.dispatchEvent(new Event('change', { bubbles: true }));
+                    }
+                }
+            } else { // Generic logic for parentKey-based child containers (e.g., fakeCalculator, patternLockApp)
+                const parentKey = checkbox.dataset.key;
+                const settingDiv = checkbox.closest('.setting');
+                if (settingDiv && parentKey) {
+                    const childSettingsContainer = settingDiv.querySelector(`.child-settings-container[data-parent-key="${parentKey}"]`);
+                    if (childSettingsContainer) {
+                        childSettingsContainer.classList.toggle('active', checkbox.checked);
+                    }
+                }
             }
         }
         if (event.target.tagName === 'SELECT') {
@@ -989,7 +1115,7 @@ function initializeEventListeners() {
             const slider = event.target;
             const sliderContainer = slider.closest('.slider-container');
             if (sliderContainer) {
-                 const valueDisplay = sliderContainer.querySelector('.slider-value'); 
+                 const valueDisplay = sliderContainer.querySelector('.slider-value');
                  if (valueDisplay) {
                      let unit = '';
                      if (slider.closest('.setting')) {
@@ -1005,7 +1131,6 @@ function initializeEventListeners() {
          }
      });
 
-    // Trigger initial state for child containers and selects
     container.querySelectorAll('input[type="checkbox"]').forEach(checkbox => checkbox.dispatchEvent(new Event('change', { bubbles: true })));
     container.querySelectorAll('.array-field select').forEach(select => select.dispatchEvent(new Event('change', { bubbles: true })));
     container.querySelectorAll('input[type="range"]').forEach(slider => slider.dispatchEvent(new Event('input', { bubbles: true })));
@@ -1027,41 +1152,82 @@ function getUpdatedConfig() {
                         continue;
                     }
 
-                    // For empty arrays handled by string-array-editor, jsonConfig is already updated.
-                    // So, they will be correctly part of updatedConfigStructured here.
-                    // No specific DOM reading needed for them here.
+                    if (key === 'fakeCalculator' && typeof settings[key] === 'boolean') {
+                        const parentCheckbox = document.querySelector(`input[type="checkbox"][data-path="${dataPath}"][data-key="${key}"]`);
+                        if (parentCheckbox) {
+                            updatedConfigStructured[category][key] = parentCheckbox.checked;
+
+                            const codeKey = 'fakeCalculatorCode';
+                            const codeDataPath = `${category}.${codeKey}`;
+                            const codeElement = document.querySelector(`input[type="text"][data-path="${codeDataPath}"][data-key="${codeKey}"]`);
+                            if (codeElement) {
+                                updatedConfigStructured[category][codeKey] = codeElement.value;
+                            } else if (parentCheckbox.checked && !updatedConfigStructured[category].hasOwnProperty(codeKey)) {
+                                updatedConfigStructured[category][codeKey] = ""; // Default if parent active and key missing
+                            }
+                        }
+                        continue;
+                    } else if (key === 'patternLockApp' && typeof settings[key] === 'boolean') {
+                        const parentCheckbox = document.querySelector(`input[type="checkbox"][data-path="${dataPath}"][data-key="${key}"]`);
+                        if (parentCheckbox) {
+                            updatedConfigStructured[category][key] = parentCheckbox.checked;
+
+                            const sizeKey = 'appPatternSize';
+                            const sizeDataPath = `${category}.${sizeKey}`;
+                            const sizeElement = document.querySelector(`input[type="number"][data-path="${sizeDataPath}"][data-key="${sizeKey}"]`);
+                            if (sizeElement) {
+                                let sizeVal = parseInt(sizeElement.value, 10);
+                                updatedConfigStructured[category][sizeKey] = isNaN(sizeVal) ? 4 : sizeVal;
+                            } else if (parentCheckbox.checked) {
+                                updatedConfigStructured[category][sizeKey] = 4; // Default if active and element missing
+                            }
+
+                            const patternKey = 'appPattern';
+                            const patternDataPath = `${category}.${patternKey}`;
+                            const patternElement = document.querySelector(`input[type="text"][data-path="${patternDataPath}"][data-key="${patternKey}"]`);
+                            if (patternElement) {
+                                updatedConfigStructured[category][patternKey] = patternElement.value;
+                            } else if (parentCheckbox.checked) {
+                                updatedConfigStructured[category][patternKey] = ""; // Default if active and element missing
+                            }
+                        }
+                        continue;
+                    }
+
 
                     if (typeof settings[key] === 'object' && settings[key] !== null && !Array.isArray(settings[key])) {
-                        const objectKeys = Object.keys(settings[key]);
+                        const currentObject = settings[key];
                         const newObject = {};
-                        // let objectUpdated = false; // Not strictly needed as we always assign newObject
-                        objectKeys.forEach(objKey => {
-                            const objElement = document.querySelector(`[data-path="${dataPath}.${objKey}"]`);
+                        Object.keys(currentObject).forEach(objKey => {
+                            const objElementPath = `${dataPath}.${objKey}`;
+                            const objElement = document.querySelector(`[data-path="${objElementPath}"]`);
                             if (objElement) {
                                 let value;
                                 if (objElement.type === 'checkbox') value = objElement.checked;
                                 else if (objElement.type === 'number' || objElement.type === 'range') value = parseFloat(objElement.value) || 0;
-                                else value = objElement.value;
+                                else value = objElement.value; // Covers text, textarea, select, etc.
                                 newObject[objKey] = value;
-                                // objectUpdated = true;
-                            } else { // Not found in DOM, assume it's part of jsonConfig (e.g. child setting)
-                                newObject[objKey] = settings[key][objKey];
+                            } else {
+                                newObject[objKey] = currentObject[objKey];
                             }
                         });
                         updatedConfigStructured[category][key] = newObject;
                         continue;
                     }
 
+                    if (Array.isArray(settings[key]) && settings[key].length === 0 && document.querySelector(`[data-category="${category}"][data-key="${key}"].sae-apply-btn`)) {
+                        // String array editor values are updated directly into jsonConfig by their apply buttons.
+                        // So, updatedConfigStructured will already have the latest from jsonConfig.
+                        continue;
+                    }
+
                     const element = document.querySelector(`[data-path="${dataPath}"][data-key="${key}"]`);
+
                     if (!element) {
-                        // Could be a boolean parent whose children were handled by createSettingElement's recursion
-                        // or an empty array handled by string-array-editor (already in jsonConfig)
                         const checkboxElement = document.querySelector(`input[type="checkbox"][data-path="${dataPath}"][data-key="${key}"]`);
-                        if (checkboxElement) { // This is the parent boolean itself
+                        if (checkboxElement) {
                             updatedConfigStructured[category][key] = checkboxElement.checked;
                         }
-                        // If not a direct element or a known checkbox, it means its value is already set in jsonConfig
-                        // (e.g. child elements, or string-array-editor updated arrays)
                         continue;
                     }
 
@@ -1107,7 +1273,7 @@ function getUpdatedConfig() {
                                 delete updatedConfigStructured[category][customPropertyName];
                             }
                         }
-                    } else {
+                    } else { // Covers text input, textarea
                         value = element.value;
                     }
 
@@ -1123,13 +1289,33 @@ function getUpdatedConfig() {
     for (const category in updatedConfigStructured) {
         if (Object.hasOwnProperty.call(updatedConfigStructured, category)) {
             const settingsInCategory = updatedConfigStructured[category];
-            for (const key in settingsInCategory) {
-                if (Object.hasOwnProperty.call(settingsInCategory, key)) {
-                    flatConfig[key] = settingsInCategory[key];
+            for (const keyInCat in settingsInCategory) {
+                if (Object.hasOwnProperty.call(settingsInCategory, keyInCat)) {
+                    flatConfig[keyInCat] = settingsInCategory[keyInCat];
                 }
             }
         }
     }
+
+    if (Object.hasOwnProperty.call(flatConfig, 'appPassword') && flatConfig.appPassword === "") {
+        delete flatConfig.appPassword;
+    }
+
+    if (Object.hasOwnProperty.call(flatConfig, 'fakeCalculator') && flatConfig.fakeCalculator === false) {
+        if (Object.hasOwnProperty.call(flatConfig, 'fakeCalculatorCode')) {
+            delete flatConfig.fakeCalculatorCode;
+        }
+    }
+
+    if (Object.hasOwnProperty.call(flatConfig, 'patternLockApp') && flatConfig.patternLockApp === false) {
+        if (Object.hasOwnProperty.call(flatConfig, 'appPatternSize')) {
+            delete flatConfig.appPatternSize;
+        }
+        if (Object.hasOwnProperty.call(flatConfig, 'appPattern')) {
+            delete flatConfig.appPattern;
+        }
+    }
+
     return flatConfig;
 }
 
