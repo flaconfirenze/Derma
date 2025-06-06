@@ -1194,6 +1194,15 @@ function getUpdatedConfig() {
                         continue;
                     }
 
+                    // Handle appPassword specifically
+                    if (key === 'appPassword') {
+                        const passwordInput = document.querySelector(`input[type="text"][data-path="${dataPath}"][data-key="${key}"]`);
+                        if (passwordInput) {
+                            updatedConfigStructured[category][key] = passwordInput.value;
+                        }
+                        continue; // Skip the generic element lookup for appPassword
+                    }
+
 
                     if (typeof settings[key] === 'object' && settings[key] !== null && !Array.isArray(settings[key])) {
                         const currentObject = settings[key];
