@@ -660,6 +660,15 @@ function createCategorySection(category, settings) {
 }
 
 function isChildSetting(childKeyToCheck, allKeysInCategoryAsArray, allSettingsInCategoryObject) {
+    // *** MODIFICATION START: Add explicit rules for known parent-child groups ***
+    if (allKeysInCategoryAsArray.includes('buildsProps') && childKeyToCheck.startsWith('buildProps')) {
+        return true;
+    }
+    if (allKeysInCategoryAsArray.includes('androidVersion') && childKeyToCheck.startsWith('androidVersion') && childKeyToCheck !== 'androidVersion') {
+        return true;
+    }
+    // *** MODIFICATION END ***
+
     if (childKeyToCheck === 'fakeCalculatorCode' && allKeysInCategoryAsArray.includes('fakeCalculator')) {
         return true;
     }
@@ -667,6 +676,7 @@ function isChildSetting(childKeyToCheck, allKeysInCategoryAsArray, allSettingsIn
         return true;
     }
 
+    // Original generic check as a fallback
     for (const parentKey of allKeysInCategoryAsArray) {
         if (childKeyToCheck !== parentKey && childKeyToCheck.startsWith(parentKey)) {
             const suffix = childKeyToCheck.substring(parentKey.length);
@@ -786,7 +796,8 @@ function createSettingElement(key, value, category, allSettingsInCategory) {
         const isIdentitySetting = key.startsWith('change') &&
             (key.includes('Id') || key.includes('Mac') || key.includes('Imei') ||
              key.includes('Imsi') || key.includes('Serial') || key.includes('Locale') ||
-             key.includes('Advertising') || key.includes('Address') || key.includes('Framework'));
+             key.includes('Advertising') || key.includes('Address') || key.includes('Framework') ||
+             key.includes('UserAgent'));
 
         const customInputId = `${category}-${key}-custom-input-${Date.now()}`;
         setting.innerHTML = `
@@ -821,63 +832,40 @@ function createSettingElement(key, value, category, allSettingsInCategory) {
         childSettingsContainer.className = 'child-settings-container';
         childSettingsContainer.dataset.parentKey = key;
 
-        // Generic child settings (those starting with parentKey and having specific suffix)
-        for (const childKey in allSettingsInCategory) {
-            if (childKey.startsWith(key) && childKey !== key &&
-                childKey !== 'fakeCalculatorCode' && childKey !== 'appPatternSize' && childKey !== 'appPattern') { // Exclude explicitly handled children
-                 const suffix = childKey.substring(key.length);
-                 if (suffix && (suffix[0] === suffix[0].toUpperCase() || !isNaN(parseInt(suffix[0])) || suffix === 'Value' )) {
-                    const childValue = allSettingsInCategory[childKey];
-                    if (typeof allSettingsInCategory[key] === 'boolean') { // Ensure parent is boolean
-                        const childSettingElement = createSettingElement(childKey, childValue, category, allSettingsInCategory);
-                        if (childSettingElement) {
-                            childSettingElement.classList.add('child-setting');
-                            childSettingsContainer.appendChild(childSettingElement);
-                        }
+        // *** MODIFICATION START: Refined logic for finding and grouping child settings ***
+        let childKeys = [];
+        if (key === 'buildsProps') {
+            childKeys = Object.keys(allSettingsInCategory).filter(k => k.startsWith('buildProps'));
+        } else if (key === 'androidVersion') {
+            childKeys = Object.keys(allSettingsInCategory).filter(k => k.startsWith('androidVersion') && k !== key);
+        } else if (key === 'fakeCalculator') {
+            childKeys = ['fakeCalculatorCode'];
+        } else if (key === 'patternLockApp') {
+            childKeys = ['appPatternSize', 'appPattern'];
+        } else {
+            // Generic fallback for other potential parent-child relationships
+            for (const childKey in allSettingsInCategory) {
+                if (childKey.startsWith(key) && childKey !== key) {
+                    const suffix = childKey.substring(key.length);
+                    if (suffix && (suffix[0] === suffix[0].toUpperCase() || !isNaN(parseInt(suffix[0])) || suffix === 'Value')) {
+                        childKeys.push(childKey);
                     }
-                 }
+                }
             }
         }
-
-        if (key === 'fakeCalculator') {
-            const codeKey = 'fakeCalculatorCode';
-            const codeValue = allSettingsInCategory[codeKey];
-            const codeSettingElement = document.createElement('div');
-            codeSettingElement.className = 'setting child-setting';
-            const codeLabel = formatLabel(codeKey);
-            const dataPathForCode = `${category}.${codeKey}`;
-            codeSettingElement.innerHTML = `
-                <label class="setting-label">${codeLabel}</label>
-                <input type="text" data-path="${dataPathForCode}" data-key="${codeKey}" value="${codeValue !== undefined ? codeValue : ''}" placeholder="Enter unlock code">
-            `;
-            childSettingsContainer.appendChild(codeSettingElement);
-        }
-
-        if (key === 'patternLockApp') {
-            const sizeKey = 'appPatternSize';
-            const currentSizeValue = allSettingsInCategory[sizeKey] !== undefined ? allSettingsInCategory[sizeKey] : 4;
-            const patternKey = 'appPattern';
-            const currentPatternValue = allSettingsInCategory[patternKey] !== undefined ? allSettingsInCategory[patternKey] : "";
-
-            const sizeSettingElement = document.createElement('div');
-            sizeSettingElement.className = 'setting child-setting';
-            const sizeLabel = formatLabel(sizeKey);
-            const dataPathForSize = `${category}.${sizeKey}`;
-            sizeSettingElement.innerHTML = `
-                <label class="setting-label">${sizeLabel}</label>
-                <input type="number" data-path="${dataPathForSize}" data-key="${sizeKey}" value="${currentSizeValue}" min="3" max="9">`;
-            childSettingsContainer.appendChild(sizeSettingElement);
-
-            const patternSettingElement = document.createElement('div');
-            patternSettingElement.className = 'setting child-setting';
-            const patternLabel = formatLabel(patternKey);
-            const dataPathForPattern = `${category}.${patternKey}`;
-            patternSettingElement.innerHTML = `
-                <label class="setting-label">${patternLabel}</label>
-                <input type="text" data-path="${dataPathForPattern}" data-key="${patternKey}" value="${currentPatternValue}" placeholder="e.g., 0,1,2,3,7,6">`;
-            childSettingsContainer.appendChild(patternSettingElement);
-        }
-
+        
+        // Render all found child keys
+        childKeys.forEach(childKey => {
+            if (allSettingsInCategory.hasOwnProperty(childKey)) {
+                const childValue = allSettingsInCategory[childKey];
+                const childSettingElement = createSettingElement(childKey, childValue, category, allSettingsInCategory);
+                if (childSettingElement) {
+                   childSettingElement.classList.add('child-setting');
+                   childSettingsContainer.appendChild(childSettingElement);
+                }
+            }
+        });
+        // *** MODIFICATION END ***
 
         if (childSettingsContainer.hasChildNodes()) {
             setting.appendChild(childSettingsContainer);
@@ -1257,6 +1245,11 @@ function getUpdatedConfig() {
                                     else if (baseProperty.endsWith('Mac')) baseProperty = baseProperty.substring(0, baseProperty.length - 3) + 'MAC';
                                     baseProperty = baseProperty.charAt(0).toLowerCase() + baseProperty.slice(1);
                                     customPropertyName = 'custom' + baseProperty.charAt(0).toUpperCase() + baseProperty.slice(1);
+
+                                    // Handle special case for plural user agents key to make it singular
+                                    if (key === 'changeSystemUserAgents') {
+                                        customPropertyName = 'customSystemUserAgent';
+                                    }
                                 } else {
                                     customPropertyName = 'custom' + key.charAt(0).toUpperCase() + key.slice(1);
                                 }
@@ -1275,6 +1268,11 @@ function getUpdatedConfig() {
                                 else if (baseProperty.endsWith('Mac')) baseProperty = baseProperty.substring(0, baseProperty.length - 3) + 'MAC';
                                 baseProperty = baseProperty.charAt(0).toLowerCase() + baseProperty.slice(1);
                                 customPropertyName = 'custom' + baseProperty.charAt(0).toUpperCase() + baseProperty.slice(1);
+
+                                // Handle special case for plural user agents key to make it singular
+                                if (key === 'changeSystemUserAgents') {
+                                    customPropertyName = 'customSystemUserAgent';
+                                }
                             } else {
                                 customPropertyName = 'custom' + key.charAt(0).toUpperCase() + key.slice(1);
                             }
