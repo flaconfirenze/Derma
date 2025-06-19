@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=0.95">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Appcloner Maker - Enhanced Floating Editor</title>
     <style>
         :root {
@@ -19,6 +19,10 @@
           margin: 0;
           padding: 16px;
           background: white;
+        }
+        /* Hides the package and split count info panel */
+        #package-info {
+            display: none !important;
         }
         .container {
           max-width: 800px;
@@ -285,6 +289,7 @@
             opacity: 0.5;
             background: rgba(0,0,0,0.02);
             border-left-color: #ccc;
+            pointer-events: none;
         }
         .editor-simple-setting {
             background: white;
@@ -390,9 +395,9 @@
 <body>
 
 <div class="container">
-  <div id="package-info" style="padding: 16px; background: linear-gradient(135deg, #eef2ff 0%, #f8f9ff 100%); border-radius: 12px; margin-bottom: 16px; display: none; border: 1px solid rgba(26, 115, 232, 0.2);">
-    <p style="margin: 0 0 8px 0;"><strong>📦 Package:</strong> <span id="packageNameDisplay" style="color: var(--primary-blue);">Not detected</span></p>
-    <p style="margin: 0;"><strong>🔢 Split Count:</strong> <span id="splitCountDisplay" style="color: var(--primary-blue);">101</span></p>
+  <div id="package-info">
+    <p><strong>📦 Package:</strong> <span id="packageNameDisplay">Not detected</span></p>
+    <p><strong>🔢 Split Count:</strong> <span id="splitCountDisplay">101</span></p>
   </div>
   <div id="loading">⏳ Loading configuration...</div>
   <div id="error-message" class="error-message" style="display: none;"></div>
@@ -408,7 +413,7 @@
             <button class="editor-close-btn" onclick="closeFloatingEditor()">&times;</button>
         </div>
         <div id="floating-editor-body" class="floating-editor-body"></div>
-        <div class="floating-editor-footer">
+        <div id="floating-editor-footer">
             <div class="editor-footer-info" id="editor-info"></div>
             <div class="editor-footer-buttons">
                 <button id="editor-cancel-btn" class="editor-button">Cancel</button>
@@ -438,6 +443,19 @@ const keysWithCustomOption = [
 ];
 
 const NON_INTERACTIVE_DIRECTORY_KEYS = ['addPermissions', 'addProviders', 'addReceivers','addServices','addActivities','stringsProperties','serialFormat'];
+
+const CUSTOM_EDITORS = ['webViewUrlDataFilterList'];
+
+// --- START: Manual setting groups ---
+const compoundSettingsMap = new Map([
+    ['dnsOverHttps', ['dnsOverHttpsCustomUrl', 'dnsOverHttpsSilent']],
+    ['skipDialogsStrings', ['skipDialogsStacktraceStrings', 'skipDialogsMonitorStacktraces']]
+]);
+const compoundSettingChildren = new Set(
+    Array.from(compoundSettingsMap.values()).flat()
+);
+// --- END: Manual setting groups ---
+
 
 // --- Enhanced Initialization ---
 document.addEventListener('DOMContentLoaded', loadConfiguration);
@@ -504,11 +522,54 @@ function analyzeParentChildRelationships() {
     }
 
     // --- START: Manual registration for groups with inconsistent naming ---
+    const manualBooleanParents = {
+        'addSnow': 'snow',
+        'pictureInPictureSupport': 'pictureInPicture'
+    };
+    
+    const explicitParentChildGroups = {
+        'randomizeBuildProps': [
+            'filterDevicesDatabase', 'devicesDatabaseFilters', 'devicesDatabaseUseAndroidVersion',
+            'devicesDatabaseSdkVersions', 'randomizeBuildPropsDeviceNamePrefix'
+        ],
+        'spoofLocation': [
+            'latitude', 'longitude', 'spoofRandomLocation', 
+            
+        ]
+    };
 
-    // Manual registration for 'buildsProps'
     const buildPropsParent = 'buildsProps';
+
     for (const category in jsonConfig) {
         const settings = jsonConfig[category];
+
+        // Handle manual boolean parents by prefix
+        for (const parentKey in manualBooleanParents) {
+            if (settings.hasOwnProperty(parentKey)) {
+                const prefix = manualBooleanParents[parentKey];
+                const children = Object.keys(settings).filter(k => k.startsWith(prefix) && k !== parentKey);
+                if (children.length > 0) {
+                    allParentKeys.add(parentKey);
+                    parentChildMap.set(parentKey, children);
+                    children.forEach(child => allChildKeys.add(child));
+                }
+            }
+        }
+
+        // Handle manual parents by explicit child list
+        for (const parentKey in explicitParentChildGroups) {
+            if (settings.hasOwnProperty(parentKey)) {
+                const children = explicitParentChildGroups[parentKey];
+                allParentKeys.add(parentKey);
+                // MERGE with existing children (e.g., from object-based detection)
+                const existingChildren = parentChildMap.get(parentKey) || [];
+                const allChildren = [...new Set([...existingChildren, ...children])];
+                parentChildMap.set(parentKey, allChildren);
+                allChildren.forEach(child => allChildKeys.add(child));
+            }
+        }
+
+        // Handle buildProps
         if (settings.hasOwnProperty(buildPropsParent)) {
             const children = Object.keys(settings).filter(k => k.startsWith('buildProps'));
             if (children.length > 0) {
@@ -516,29 +577,6 @@ function analyzeParentChildRelationships() {
                 parentChildMap.set(buildPropsParent, children);
                 children.forEach(child => allChildKeys.add(child));
             }
-            break;
-        }
-    }
-
-    // Manual registration for 'dnsOverHttps'
-    const dohParent = 'dnsOverHttps';
-    for (const category in jsonConfig) {
-        const settings = jsonConfig[category];
-        if (settings.hasOwnProperty(dohParent)) {
-            // Find all keys that are likely children but aren't detected automatically
-            const children = Object.keys(settings).filter(k =>
-                k !== dohParent && (k.toLowerCase().includes('dns') || k.toLowerCase().includes('doh'))
-            );
-
-            if (children.length > 0) {
-                const existingChildren = parentChildMap.get(dohParent) || [];
-                const allChildren = [...new Set([...existingChildren, ...children])];
-
-                allParentKeys.add(dohParent);
-                parentChildMap.set(dohParent, allChildren);
-                allChildren.forEach(child => allChildKeys.add(child));
-            }
-            break;
         }
     }
     // --- END: Manual registration ---
@@ -554,12 +592,10 @@ function analyzeParentChildRelationships() {
 function updatePackageName(packageName) {
     currentPackageName = packageName;
     document.getElementById('packageNameDisplay').textContent = packageName;
-    document.getElementById('package-info').style.display = 'block';
 }
 function updateSplitCount(count) {
     configFileSplitCount = count;
     document.getElementById('splitCountDisplay').textContent = count;
-    document.getElementById('package-info').style.display = 'block';
 }
 
 // --- Enhanced UI Rendering ---
@@ -582,10 +618,11 @@ function renderConfiguration(config) {
         const content = document.createElement('div');
         content.className = 'category-content';
         
-        // Only render main settings (parents and standalone settings)
+        // Only render main settings (parents, compound, and standalone settings)
         for (const key in settings) {
             if (Object.hasOwnProperty.call(settings, key) && 
-                !allChildKeys.has(key) && 
+                !allChildKeys.has(key) &&
+                !compoundSettingChildren.has(key) &&
                 !NON_INTERACTIVE_DIRECTORY_KEYS.includes(key)) {
                 content.appendChild(createEnhancedSettingRow(key, settings[key], category));
             }
@@ -604,7 +641,7 @@ function createEnhancedSettingRow(key, value, category) {
     row.className = 'setting-row';
     
     const isParent = allParentKeys.has(key);
-    if (isParent) {
+    if (isParent || compoundSettingsMap.has(key) || CUSTOM_EDITORS.includes(key)) {
         row.classList.add('has-children');
     }
     
@@ -639,7 +676,7 @@ function createEnhancedSettingRow(key, value, category) {
 }
 
 function getSettingTypeIndicator(key, value) {
-    if (allParentKeys.has(key)) return '<span class="setting-type-indicator type-parent"></span>';
+    if (allParentKeys.has(key) || compoundSettingsMap.has(key) || CUSTOM_EDITORS.includes(key)) return '<span class="setting-type-indicator type-parent"></span>';
     if (typeof value === 'boolean') return '<span class="setting-type-indicator type-boolean"></span>';
     if (Array.isArray(value)) return '<span class="setting-type-indicator type-array"></span>';
     if (typeof value === 'number') return '<span class="setting-type-indicator type-number"></span>';
@@ -647,10 +684,22 @@ function getSettingTypeIndicator(key, value) {
 }
 
 function getSettingTypeBadge(key, value) {
-    if (allParentKeys.has(key)) {
-        const childCount = parentChildMap.get(key)?.length || 0;
-        return `<span class="setting-row-type-badge">👥 ${childCount} options</span>`;
+    if (CUSTOM_EDITORS.includes(key)) {
+        const count = Array.isArray(value) ? value.length : 0;
+        return `<span class="setting-row-type-badge">☰ ${count} item(s)</span>`;
     }
+
+    let childCount = 0;
+    if (allParentKeys.has(key)) {
+        childCount = parentChildMap.get(key)?.length || 0;
+    } else if (compoundSettingsMap.has(key)) {
+        childCount = compoundSettingsMap.get(key)?.length || 0;
+    }
+
+    if (childCount > 0) {
+        return `<span class="setting-row-type-badge">👥 ${childCount + 1} options</span>`;
+    }
+
     if (typeof value === 'boolean') return '<span class="setting-row-type-badge">⏰ Toggle</span>';
     if (Array.isArray(value)) return '<span class="setting-row-type-badge">📋 List</span>';
     if (typeof value === 'number') return '<span class="setting-row-type-badge">🔢 Number</span>';
@@ -658,6 +707,11 @@ function getSettingTypeBadge(key, value) {
 }
 
 function getEnhancedSummaryText(key, value, category) {
+    if (CUSTOM_EDITORS.includes(key)) {
+        const count = Array.isArray(value) ? value.length : 0;
+        return { text: `${count} configured`, className: count > 0 ? 'enabled' : 'disabled' };
+    }
+    
     const isObjectParent = typeof value === 'object' && value !== null && !Array.isArray(value);
     const isBooleanParent = allParentKeys.has(key) && typeof value === 'boolean';
     
@@ -709,15 +763,19 @@ const editorInfo = document.getElementById('editor-info');
 
 function openFloatingEditor(key, category) {
     const isParent = allParentKeys.has(key);
-    const children = parentChildMap.get(key) || [];
+    const isCompound = compoundSettingsMap.has(key);
+    const isCustom = CUSTOM_EDITORS.includes(key);
+    let children = [];
+    if (isParent) children = parentChildMap.get(key) || [];
+    if (isCompound) children = compoundSettingsMap.get(key) || [];
     
     editorTitle.innerHTML = `
         ${getSettingTypeIndicator(key, jsonConfig[category][key])}
         <strong>${formatLabel(key)}</strong>
     `;
     
-    editorInfo.textContent = isParent ? 
-        `Parent setting with ${children.length} child options` : 
+    editorInfo.textContent = (isParent || isCompound || isCustom) ? 
+        `Grouped setting` : 
         'Simple setting';
     
     editorBody.innerHTML = '';
@@ -741,38 +799,48 @@ function saveEditorChanges() {
     const key = editorOverlay.dataset.key;
     const category = editorOverlay.dataset.category;
     
-    editorBody.querySelectorAll('[data-path]').forEach(input => {
-        const path = input.dataset.path.split('.');
-        let value;
-        
-        if (input.type === 'checkbox') {
-            value = input.checked;
-        } else if (input.type === 'number') {
-            value = parseFloat(input.value);
-        } else if (input.tagName === 'TEXTAREA') {
-            try {
-                value = JSON.parse(input.value);
-            } catch {
+    // Custom editors like the WebView Filter update the model in real-time,
+    // so no extra save logic is needed here for them.
+    if (!CUSTOM_EDITORS.includes(key)) {
+        editorBody.querySelectorAll('[data-path]').forEach(input => {
+            const path = input.dataset.path.split('.');
+            let value;
+            
+            if (input.dataset.type === 'array-textarea') {
+                value = input.value.split('\n').map(s => s.trim()).filter(Boolean);
+            } else if (input.type === 'checkbox') {
+                value = input.checked;
+            } else if (input.type === 'number') {
+                value = input.value === '' ? '' : (parseFloat(input.value) || 0);
+            } else if (input.tagName === 'TEXTAREA') {
+                try {
+                    value = JSON.parse(input.value);
+                } catch {
+                    value = input.value;
+                }
+            } else {
                 value = input.value;
             }
-        } else {
-            value = input.value;
-        }
-        
-        let current = jsonConfig;
-        for (let i = 0; i < path.length - 1; i++) {
-            current = current[path[i]];
-        }
-        
-        if (input.tagName === 'SELECT' && value === 'custom') {
-            const customInput = editorBody.querySelector(`[data-path="${input.dataset.path}-custom"]`);
-            current[path[path.length - 1]] = [customInput.value];
-        } else if (Array.isArray(current[path[path.length-1]])) {
-             current[path[path.length-1]] = [value];
-        } else {
-            current[path[path.length - 1]] = value;
-        }
-    });
+            
+            let current = jsonConfig;
+            for (let i = 0; i < path.length - 1; i++) {
+                current = current[path[i]];
+            }
+            
+            const keyToUpdate = path[path.length - 1];
+
+            if (input.dataset.type === 'array-textarea') {
+                current[keyToUpdate] = value;
+            } else if (input.tagName === 'SELECT' && value === 'custom') {
+                const customInput = editorBody.querySelector(`[data-path="${input.dataset.path}-custom"]`);
+                current[keyToUpdate] = [customInput.value];
+            } else if (Array.isArray(current[keyToUpdate]) && !key.toLowerCase().includes('strings') && !key.toLowerCase().includes('filters')) {
+                current[keyToUpdate] = [value];
+            } else {
+                current[keyToUpdate] = value;
+            }
+        });
+    }
     
     // Update UI
     const settingRow = document.querySelector(`.setting-row[data-key="${key}"][data-category="${category}"]`);
@@ -798,13 +866,212 @@ document.addEventListener('keydown', (e) => {
 
 function createEnhancedEditorControls(key, category) {
     const container = document.createElement('div');
-    const value = jsonConfig[category][key];
     const isParent = allParentKeys.has(key);
 
-    if (isParent) {
+    if (CUSTOM_EDITORS.includes(key)) {
+        if (key === 'webViewUrlDataFilterList') {
+            container.appendChild(buildWebViewFilterEditor(key, category));
+        }
+    } else if (compoundSettingsMap.has(key)) {
+        container.appendChild(buildCompoundSettingEditor(key, category));
+    } else if (isParent) {
         container.appendChild(buildEnhancedParentEditor(key, category));
     } else {
         container.appendChild(buildEnhancedSimpleEditor(key, category));
+    }
+    
+    return container;
+}
+
+function buildWebViewFilterEditor(key, category) {
+    const container = document.createElement('div');
+    const list = jsonConfig[category][key] || [];
+
+    const defaultFilter = {
+        dataExpression: "", dataExpressionBlockOnMatch: false, dataExpressionIgnoreCase: false,
+        dataReplacement: "", dataReplacementReplaceAll: false, urlExpression: "",
+        urlExpressionBlockOnMatch: false, urlReplacement: "", urlReplacementUrlEncode: false
+    };
+
+    if (list.length === 0) {
+        list.push({ ...defaultFilter });
+    }
+
+    let currentIndex = 0;
+
+    const header = document.createElement('div');
+    header.style.cssText = 'display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.5rem; border-bottom: 1px solid #eee; padding-bottom: 1rem;';
+    
+    const nav = document.createElement('div');
+    nav.style.cssText = 'display: flex; align-items: center; gap: 0.5rem;';
+    
+    const prevBtn = document.createElement('button');
+    prevBtn.textContent = '◀';
+    prevBtn.className = 'editor-button';
+
+    const status = document.createElement('span');
+    status.style.cssText = 'font-weight: 500; min-width: 50px; text-align: center;';
+    
+    const nextBtn = document.createElement('button');
+    nextBtn.textContent = '▶';
+    nextBtn.className = 'editor-button';
+
+    nav.append(prevBtn, status, nextBtn);
+
+    const actions = document.createElement('div');
+    actions.style.cssText = 'display: flex; align-items: center; gap: 0.5rem;';
+
+    const addBtn = document.createElement('button');
+    addBtn.textContent = '➕';
+    addBtn.className = 'editor-button';
+
+    const deleteBtn = document.createElement('button');
+    deleteBtn.textContent = '➖';
+    deleteBtn.className = 'editor-button';
+
+    actions.append(addBtn, deleteBtn);
+    header.append(nav, actions);
+
+    const formContainer = document.createElement('div');
+
+    const renderCurrentFilter = () => {
+        formContainer.innerHTML = '';
+        if (list.length === 0) {
+            status.textContent = '0 / 0';
+            prevBtn.disabled = true;
+            nextBtn.disabled = true;
+            deleteBtn.disabled = true;
+            return;
+        }
+
+        status.textContent = `${currentIndex + 1} / ${list.length}`;
+        prevBtn.disabled = currentIndex === 0;
+        nextBtn.disabled = currentIndex === list.length - 1;
+        deleteBtn.disabled = list.length === 0;
+
+        const currentFilter = list[currentIndex];
+
+        const createSection = (title) => {
+            const section = document.createElement('div');
+            section.style.marginBottom = '1rem';
+            const h4 = document.createElement('h4');
+            h4.textContent = title;
+            h4.style.cssText = 'margin-top: 0; margin-bottom: 1rem; padding-bottom: 0.5rem; border-bottom: 2px solid var(--primary-blue)';
+            section.appendChild(h4);
+            return section;
+        };
+
+        const createInput = (label, key, type = 'text') => {
+            const setting = buildEnhancedSimpleEditor(label, category);
+            const input = setting.querySelector('input');
+            input.id = `filter-input-${key}`;
+            input.value = currentFilter[key] || '';
+            input.dataset.key = key;
+            input.oninput = (e) => { currentFilter[key] = e.target.value; };
+            return setting;
+        };
+        
+        const createCheckbox = (label, key) => {
+            const setting = buildEnhancedSimpleEditor(label, category);
+            const checkbox = setting.querySelector('input');
+            checkbox.type = 'checkbox';
+            checkbox.id = `filter-input-${key}`;
+            checkbox.checked = currentFilter[key] || false;
+            checkbox.dataset.key = key;
+            checkbox.onchange = (e) => { currentFilter[key] = e.target.checked; };
+            return setting;
+        };
+
+        // URL Section
+        const urlSection = createSection('URL');
+        urlSection.appendChild(createInput('Regular expression', 'urlExpression'));
+        urlSection.appendChild(createCheckbox('Block if matching', 'urlExpressionBlockOnMatch'));
+        urlSection.appendChild(createInput('Replacement', 'urlReplacement'));
+        urlSection.appendChild(createCheckbox('URL-encode replacement', 'urlReplacementUrlEncode'));
+        
+        // Data Section
+        const dataSection = createSection('Data');
+        dataSection.appendChild(createInput('Regular expression', 'dataExpression'));
+        dataSection.appendChild(createCheckbox('Ignore case', 'dataExpressionIgnoreCase'));
+        dataSection.appendChild(createCheckbox('Block if matching', 'dataExpressionBlockOnMatch'));
+        dataSection.appendChild(createInput('Replacement', 'dataReplacement'));
+        dataSection.appendChild(createCheckbox('Replace all', 'dataReplacementReplaceAll'));
+        
+        formContainer.append(urlSection, dataSection);
+    };
+
+    prevBtn.onclick = () => { if (currentIndex > 0) { currentIndex--; renderCurrentFilter(); } };
+    nextBtn.onclick = () => { if (currentIndex < list.length - 1) { currentIndex++; renderCurrentFilter(); } };
+    
+    addBtn.onclick = () => {
+        list.push({ ...defaultFilter });
+        currentIndex = list.length - 1;
+        renderCurrentFilter();
+    };
+
+    deleteBtn.onclick = () => {
+        if (list.length > 0) {
+            list.splice(currentIndex, 1);
+            if (currentIndex >= list.length) {
+                currentIndex = Math.max(0, list.length - 1);
+            }
+            if (list.length === 0) {
+                 list.push({ ...defaultFilter });
+                 currentIndex = 0;
+            }
+            renderCurrentFilter();
+        }
+    };
+
+    container.append(header, formContainer);
+    renderCurrentFilter();
+    return container;
+}
+
+
+function buildCompoundSettingEditor(key, category) {
+    const container = document.createElement('div');
+    const children = compoundSettingsMap.get(key) || [];
+
+    const mainEditor = buildEnhancedSimpleEditor(key, category);
+    mainEditor.style.border = '2px solid var(--primary-blue)';
+    container.appendChild(mainEditor);
+
+    const optionsTitle = document.createElement('h4');
+    optionsTitle.textContent = `⚙️ Related Options`;
+    optionsTitle.style.cssText = `margin-top: 24px; margin-bottom: 10px; color: #333; border-top: 1px solid var(--border-gray); padding-top: 16px;`;
+    container.appendChild(optionsTitle);
+    
+    const childContainer = document.createElement('div');
+    childContainer.style.cssText = `border-left: 4px solid var(--primary-blue); margin-left: 0; padding: 16px; background: rgba(26, 115, 232, 0.03); border-radius: 8px;`;
+    
+    children.forEach(childKey => {
+        const childEditor = buildEnhancedSimpleEditor(childKey, category);
+        childEditor.style.cssText = `margin-bottom: 16px; padding: 12px;`;
+        childContainer.appendChild(childEditor);
+    });
+    if (childContainer.lastChild) childContainer.lastChild.style.marginBottom = '0';
+    container.appendChild(childContainer);
+
+    if (key === 'dnsOverHttps') {
+        const mainSelect = mainEditor.querySelector('select');
+        const customUrlEditor = container.querySelector(`[data-path="${category}.dnsOverHttpsCustomUrl"]`).closest('.editor-simple-setting');
+        const toggleVisibility = () => { if (customUrlEditor) customUrlEditor.style.display = mainSelect.value.toUpperCase() === 'CUSTOM' ? 'block' : 'none'; };
+        mainSelect.addEventListener('change', toggleVisibility);
+        toggleVisibility();
+    } else if (key === 'skipDialogsStrings') {
+        const monitorCheckbox = container.querySelector(`[data-path="${category}.skipDialogsMonitorStacktraces"]`);
+        const stacktraceTextarea = container.querySelector(`[data-path="${category}.skipDialogsStacktraceStrings"]`);
+        const stacktraceEditor = stacktraceTextarea.closest('.editor-simple-setting');
+        const toggleVisibility = () => {
+            if (stacktraceEditor) {
+                stacktraceEditor.style.transition = 'opacity 0.3s';
+                stacktraceEditor.style.opacity = monitorCheckbox.checked ? '1' : '0.5';
+                stacktraceTextarea.disabled = !monitorCheckbox.checked;
+            }
+        };
+        monitorCheckbox.addEventListener('change', toggleVisibility);
+        toggleVisibility();
     }
     
     return container;
@@ -818,19 +1085,15 @@ function buildEnhancedParentEditor(key, category) {
     const isObjectType = typeof value === 'object' && value !== null && !Array.isArray(value);
     const isEnabled = isObjectType ? value.enabled : value;
 
-    // Parent section
     const parentSection = document.createElement('div');
     parentSection.className = 'editor-parent-section';
     
-    // Parent header with toggle
     const parentHeader = document.createElement('div');
     parentHeader.className = 'editor-parent-header';
     
     const toggleContainer = document.createElement('div');
     toggleContainer.className = 'editor-checkbox-row';
-    toggleContainer.style.background = 'transparent';
-    toggleContainer.style.border = 'none';
-    toggleContainer.style.padding = '0';
+    toggleContainer.style.cssText = 'background: transparent; border: none; padding: 0;';
     
     const checkbox = document.createElement('input');
     checkbox.type = 'checkbox';
@@ -840,57 +1103,127 @@ function buildEnhancedParentEditor(key, category) {
     
     const label = document.createElement('label');
     label.textContent = `Enable ${formatLabel(key)}`;
-    label.style.color = 'white';
-    label.style.fontWeight = '600';
+    label.style.cssText = 'color: white; font-weight: 600;';
     
-    // Update child settings visibility when parent changes
     checkbox.onchange = () => {
         const childContainer = parentSection.querySelector('.editor-child-settings');
-        if (childContainer) {
-            if (checkbox.checked) {
-                childContainer.classList.remove('disabled');
-            } else {
-                childContainer.classList.add('disabled');
-            }
-        }
+        if (childContainer) childContainer.classList.toggle('disabled', !checkbox.checked);
     };
     
     toggleContainer.appendChild(checkbox);
     toggleContainer.appendChild(label);
     parentHeader.appendChild(toggleContainer);
     
-    // Child settings container
     const childSettings = document.createElement('div');
     childSettings.className = `editor-child-settings ${!isEnabled ? 'disabled' : ''}`;
     
-    if (children.length > 0) {
-        const childTitle = document.createElement('h4');
-        childTitle.textContent = `⚙️ ${formatLabel(key)} Options`;
-        childTitle.style.marginTop = '0';
-        childTitle.style.color = '#333';
-        childSettings.appendChild(childTitle);
+    // --- SPECIAL UI FOR SPOOF LOCATION ---
+    if (key === 'spoofLocation') {
+        const coordsContainer = document.createElement('div');
+        coordsContainer.style.marginBottom = '1rem';
+        const latEditor = buildEnhancedSimpleEditor('latitude', category, `${category}.spoofLocationLatitude`);
+        const lonEditor = buildEnhancedSimpleEditor('longitude', category, `${category}.spoofLocationLongitude`);
+        latEditor.style.marginBottom = '1rem';
+        lonEditor.style.marginBottom = 0;
+        coordsContainer.append(latEditor, lonEditor);
+
+        const mapImg = document.createElement('img');
+        mapImg.src = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyMDAwIDEwMDEiPjxwYXRoIGZpbGw9IiMwMDAiIGQ9Ik0xODM4LjIgNTkzLjVjLTIuMy0zLjItMy4xLTYuMS0zLjEtOC45IDAtMi40IDEuMS00LjkgMy4xLTcuMWwxLjEtMS4zYzIuNC0yLjggNS4xLTUuMSA3LjEtNi4zbDEuOC0xLjFjNS4yLTMuMyA4LjItMy42IDExLjItMS4zIDIuNyAyLjEgMy42IDUuNCAzLjEgOC45LS42IDMuNi0yLjUgNi45LTUuMSA5LjZsLTEuMyAxLjZjLTIuNSAzLTUuMiA1LjMtNy4yIDYuNWwtMS42LjljLTIuMi45LTQuNy43LTcuMS0uNGwtLjYtLjJ6bS0zMi45LTEwLjljLTIuNCAxLjMtNC45IDIuMi03LjUgMi41LTMuMy40LTYuNi0uNi05LjEtMi41LTIuOS0yLjItNC43LTUuNS01LjItOS4xLS42LTQuMS44LTcuOSAzLjUtMTAuNyAyLjQtMi41IDUuNS00IDkuMS00LjFsNy4xLS4yYzMuNSAwIDYuNiAxLjMgOC45IDMuNiAyLjUgMi41IDMuOSA1LjggMy42IDkuMy0uMyAzLjYtMiA2LjgtNC43IDkuMWwtMS4zIDEuM2MtLjYuNi0xLjMgMS4yLTIuMSAxLjdslC40LjN6TTEwMDAgMEM0NDcuNyAwIDAgNDQ3LjcgMCAxMDAwaDIwMDBDMjAwMCA0NDcuNyAxNTUyLjMgMCAxMDAwIDB6Ii8+PHBhdGggZmlsbD0iIzAwMCIgZD0iTTE3MTguMyAzOTIuMmMtMi40LTEuMi01LjEtMS44LTgtMS44LTQuMiAwLTcuNyAxLjYtMTAuNCA0LjEtMi45IDIuNy00LjcgNi4zLTUuMiAxMC40LS42IDQuNCAxIDguNSA0LjEgMTEuNSAyLjkgMi43IDYuOCA0LjIgMTAuOSA0LjEgNC40LS4xIDguMi0yIDExLjItNS4xIDIuOS0yLjkgNC43LTYuOCA1LjEtMTEuMi40LTQuNy0xLjItOS4xLTQuMS0xMi4ybC0zLjMtNC4zeiIvPjxwYXRoIGZpbGw9IiMwMDAiIGQ9Im0xNTQ3LjQgNTEzLjgtMy0xLjEtMi45LTIuOS0yLjktMi45Yy0yLjctMi45LTUtNS4yLTcuMS01LjJzLTQuMSAyLjMtNS44IDUuMmMtMS44IDIuOS0xLjUgNi4xLjkgOC45bDEuNiAxLjhjMi40IDIuNyA1LjIgNSA3LjcgNS4ybDMuMy4zYzIuNy4xIDUuMy0uOSA3LjQtMi44bDEuMy0xLjEuOS0xLjMuMS0xLjN6Ii8+PHBhdGggZmlsbD0iIzAwMCIgZD0iTTE2NzcuMiAzNjcuN2MtMTMtMi4xLTI0LjUgNC4zLTI5LjMgMTUuOS01LjEgMTIuNC40IDI2LjUgMTMuNCAzMS42IDEzIDUuMSAyNi41LS40IDMxLjYtMTMuNCA1LjEtMTIuNS0uNC0yNi41LTEzLjQtMzEuNmwtMi4zLTEuNXoiLz48cGF0aCBmaWxsPSIjMDAwIiBkPSJNMzYyLjQgNDk5LjhjLS45LTMuOS00LjEtNi44LTgtNy43LTQuMS0xLTguMi44LTEwLjcgNC4xcy0zLjUgNy41LTIuNSAxMS41YzEgNC4xIDQuMSA3LjEgOC4yIDcuOCA0LjEuOCA4LjItLjggMTAuNy00LjEgMi40LTMuNCAzLjQtNy41IDIuMy0xMS42eiIvPjxwYXRoIGZpbGw9IiMwMDAiIGQ9Ik0xMDY2LjggNDU5LjFjLTEuNi00LjQtNS44LTcuNC0xMC43LTcuNC00LjcgMC04LjggMi41LTEwLjkgNi42LTIuMyA0LjQtMS44IDkuMyAxLjIgMTIuNyAyLjkgMy41IDcuNCA1LjIgMTEuOCA0LjEgNC43LTEgOC41LTQuNCA5LjktOC45bC4zLTEuNmMuMy0xLjYuMy0zLjIuMy00LjlsLS4zLTEuMnpNMjA1LjUgMzk2LjljLTQuNC0yLjEtOS4zLTEuOC0xMy40IDEtNC4xIDIuNy02LjggNy4xLTcuMSAxMi4xLS4zIDUuMSAxLjggOS45IDUuOCAxMi43IDQuMSAyLjkgOS4zIDMuMyAxMy44IDEuMyA0LjQtMi4xIDcuNC02LjMsNy44LTExLjIuMy01LjEtMS44LTkuOS01LjgtMTIuN2wtMS4yLTMuMnoiLz48cGF0aCBmaWxsPSIjMDAwIiBkPSJtMTQwNS4zIDQwMC45LS45IDQuNGMtLjYgMy0xLjMgNi0yLjIgOC45bC0xLjMgNC40Yy0xLjggNS43LTQuNiAxMS04LjMgMTUuNmwtNS41IDYuNmMtMy42IDQuNC03LjggOC0xMi40IDEwLjdsLTYuMyAyLjctNi45IDIuNS0xMy42IDMuOS0xMC45IDIuMi0xMy4xIDEuMy0xMC45LS4yLTkuMS0xLjUtMTEuNS0zLjMtOS45LTUuMWwtNy43LTUuMi05LjEtNy4xLTQuNy00LjQtOS45LTEwLjQtNS41LTYuNi02LjEtOC4zLTQuNC02LjNjLTIuNy00LjEtNS04LjUtNi42LTEzLjFsLTEuOC01LjItMS42LTUuNS0xLjItNS41Yy0uMy0xLjgtLjYtMy42LS44LTUuNWwtLjMtNS44YzAtNC4xLjMtOC4zLjktMTIuNGwuOC01LjUgMS41LTYuMWMxLjItNC42IDIuOC04LjkgNS0xMy4xbDMuMi02YzIuNC00LjYgNS4yLTguOCA4LjYtMTIuN2w1L S5LjcgNS43LTYgNS43IDYuMy01LjIgNi4zLTQuNiA2LjMtMy44IDYuNi0zLjIgNi42LTIuNSA2LjYtMS42IDYuNi0uOCA2LjMuMiA2LjMuOSA2LjEgMS42IDYuMSAyLjUgNi4xIDMuNSA1LjggNC42IDUuOCA1LjIgNS41IDYuMyA1LjIgNy4xIDQuNyA4LjMgNC4xIDguOSAzLjUgOS4zIDIuOCA5LjkgMi4yIDEwLjEgMS41IDEwLjQuNiAxMC43LS4yIDEwLjktMS4xIDEwLjktMi4xIDEwLjktMy4yIDEwLjctNC40IDEwLjQtNS44IDkuOS03LjEgOS4zLTguNiA4LjUtMTAuMSA3LjctMTEuNSA2LjYtMTIuOSA1LjItMTQuNCAzLjgtMTUuOSAyLjMtMTcuNS44LTE4LjktLjktMjAuNC0yLjgtMjEuOC01LTIzLjEtNy4yLTI0LjQtOS44LTI1LjUtMTIuNS0xMi40LTI1LjItMTEuOC0yNy4xLTEwLjktMjguNy05LjktMzAuMS04LjYtMzEuMy03LjItMzIuNS01LjgtMzMuNS00LjMtMzQuNC0yLjctMzUuMy0xLTM2LjFsMS41IDNjMS4zIDIuNyAyLjQgNS41IDMuMiA4LjNsMS4xIDMuOGMxLjMgNC43IDIuMiA5LjYgMi41IDE0LjcuMyA1LjItLjIgMTAuNC0xLjIgMTUuM2wtMS44IDguNmMtMS4zIDYuMS0zLjYgMTEuOS02LjYgMTcuM2wtNC42IDcuOGMtMy4yIDUuMi03LjEgOS45LTExLjUgMTMuOWwtNi4zIDUuN2MtNC40IDMuOC05LjEgNi45LTE0LjEgOS4zbC02LjkgMy4zYy01IDIuMy0xMC4xIDMuOC0xNS4zIDQuNGwtNy4yLjgtNy4yLjItNy4xLS4zLTYuOS0uOS02LjgtMS41LTYuNi0yLjItNi4zLTMtNi4xLTMuOC01LjgtNC42LTUuNS01LjVjLTMuNi0zLjgtNi45LTgtOS45LTEyLjVsLTQuNC02LjgtNC40LTcuNC00LjEtNy44LTMuOC04LjMtMy41LTguOS0zLTkuNi0yLjctMTAuMS0yLjMtMTAuNy0yLTExLjItLjItMS4zLS4zLTIuNy0uMy00LjEgMC0yLjkuNS01LjggMS41LTguNWwxLjUtNC4xYzEuMi0zLjIgMi43LTYuMSA0LjYtOC44bDIuOC00LjFjMi0yLjkgNC4zLTUuNSA2LjgtNy44bDMuOC0zLjVjMi43LTIuMyA1LjctNC40IDguOC02LjFsNC42LTIuN2MzLTEuNiA2LjMtMi45IDkuNi0zLjhsNC45LTEuNWMzLjMtMSA2LjgtMS42IDEwLjItMS44bDUuMS0uNSA1LjIuMiA1LjEuOCA1IDEuMyA0LjkgMiA0LjcgMi41IDQuNiAzLjIgNC4zIDMuOSA0LjkgNC42IDMuNiA1LjIgMy4zIDYgMyA2LjYgMi43IDcuMiAyLjMgNy44IDIgOC41IDEuNiA5LjEuOSA5LjguMiAxMC40LS44IDEwLjktMS44IDExLjItMyAxMS41LTQuMyAxMS42LTUuNyAxMS44LTcuMiAxMS44LTguOCAxMS42LTEwLjQgMTEuMi0xMi4xIDEwLjctMTMuOCAxMC4xLTE1LjYgOS4zLTE3LjMgOC4zLTE4LjkgNy4yLTIwLjQgNi0yMS44IDQuNy0yMy4xIDMuMy0yNC40IDItMjUuNS41LTI2LjUtMS0yNy40LTIuNS0yOC4yLTQuMS0yOC44LTUuOC0yOS4zLTcuNy0yOS42LTkuNi0yOS44LTExLjUtMjkuOC0xMy40LTI5LjYtMTUuMy0yOS4zLTE3LjItMjguOC0xOS4xLTI4LjItMjAuOC0yNy40LTIyLjUtMjYuNS0yNC4xLTI1LjUtMjUuNS0yNC40LTI2LjgtMjMuMS0yNy45LTIxLjgtMjguOC0yMC40LTI5LjYtMTguOS0zMC4xLTE3LjMtMzAuNS0xNS42LTMwLjgtMTMuOC0zMC44LTEyLjEtMzAuOC0xMC4yLTMwLjUtOC41LTMwLjEtNi44LTI5LjYtNS0yOS0zLjItMjguMi0xLjMtMjcuNC41LTI2LjUgMi4zLTI1LjUgNC4xLTI0LjQgNi0yMy4xIDcuOC0yMS44IDkuNi0yMC40IDExLjItMTguOSAxMi43LTE3LjMgMTQuMS0xNS42IDE1LjMtMTMuOCAxNi40LTEyLjEgMTcuMy0xMC4yIDE4LjEtOC41IDE4LjgtNi44IDE5LjItNSAxOS41LTMuMiAxOS43LTEuMyAxOS43bC00LjEgNi4xeiIvPjwvc3ZnPg==';
+        mapImg.style.cssText = 'width: 100%; border: 1px solid #ccc; background: #fff; border-radius: 8px; margin-bottom: 1rem;';
+
+        const buttonContainer = document.createElement('div');
+        buttonContainer.style.cssText = 'display: flex; gap: 8px; margin-bottom: 1rem;';
         
-        children.forEach(childKey => {
-            const childValue = isObjectType ? value[childKey] : jsonConfig[category][childKey];
-            if (childValue !== undefined) {
-                const childEditor = buildEnhancedSimpleEditor(
-                    childKey, 
-                    category, 
-                    isObjectType ? `${dataPath}.${childKey}` : `${category}.${childKey}`
-                );
-                childEditor.style.marginBottom = '16px';
-                childEditor.style.padding = '12px';
-                childEditor.style.background = 'rgba(255,255,255,0.7)';
-                childEditor.style.borderRadius = '6px';
-                childEditor.style.border = '1px solid #e0e0e0';
-                childSettings.appendChild(childEditor);
-            }
+        const randomizeBtn = document.createElement('button');
+        randomizeBtn.textContent = 'Randomize';
+        randomizeBtn.type = 'button';
+        randomizeBtn.className = 'editor-button primary';
+        randomizeBtn.style.width = '100%';
+        randomizeBtn.onclick = () => {
+            const coords = generateRealisticCoordinates();
+            const latInput = latEditor.querySelector('input');
+            const lonInput = lonEditor.querySelector('input');
+            latInput.value = coords.latitude;
+            lonInput.value = coords.longitude;
+            // Trigger change event to ensure data model is updated
+            latInput.dispatchEvent(new Event('change', { bubbles: true }));
+            lonInput.dispatchEvent(new Event('change', { bubbles: true }));
+        };
+        buttonContainer.append(randomizeBtn);
+
+        const otherOptionsContainer = document.createElement('div');
+        const hr = document.createElement('hr');
+        hr.style.cssText = 'border: none; border-top: 1px solid var(--border-gray); margin: 1rem 0;';
+        otherOptionsContainer.appendChild(hr);
+
+        const randomLocEditor = buildEnhancedSimpleEditor('spoofRandomLocation', category);
+        const randomCheckboxInput = randomLocEditor.querySelector('input[type="checkbox"]');
+        randomCheckboxInput.addEventListener('change', () => {
+            const disabled = randomCheckboxInput.checked;
+            coordsContainer.style.opacity = disabled ? 0.5 : 1;
+            coordsContainer.querySelectorAll('input').forEach(inp => inp.disabled = disabled);
         });
+        setTimeout(() => randomCheckboxInput.dispatchEvent(new Event('change')), 0); // Initial check
+        
+        otherOptionsContainer.appendChild(randomLocEditor);
+        
+        children.filter(c => !['latitude', 'longitude', 'spoofRandomLocation'].includes(c))
+            .forEach(childKey => {
+                const childPath = (isObjectType && value[childKey] !== undefined) ? `${dataPath}.${childKey}` : `${category}.${childKey}`;
+                otherOptionsContainer.appendChild(buildEnhancedSimpleEditor(childKey, category, childPath));
+            });
+
+        childSettings.append(coordsContainer, mapImg, buttonContainer, otherOptionsContainer);
+
+    } else { // --- GENERIC UI FOR OTHER PARENTS ---
+        if (children.length > 0) {
+            const childTitle = document.createElement('h4');
+            childTitle.textContent = `⚙️ ${formatLabel(key)} Options`;
+            childTitle.style.cssText = 'margin-top: 0; color: #333;';
+            childSettings.appendChild(childTitle);
+            
+            children.forEach(childKey => {
+                const isInternalChild = isObjectType && value.hasOwnProperty(childKey);
+                const childValue = isInternalChild ? value[childKey] : jsonConfig[category][childKey];
+                
+                if (childValue !== undefined) {
+                    const childDataPath = isInternalChild ? `${dataPath}.${childKey}` : `${category}.${childKey}`;
+                    const childEditor = buildEnhancedSimpleEditor(childKey, category, childDataPath);
+                    childEditor.style.cssText = 'margin-bottom: 16px; padding: 12px; background: rgba(255,255,255,0.7); border-radius: 6px; border: 1px solid #e0e0e0;';
+                    childSettings.appendChild(childEditor);
+                }
+            });
+        }
     }
     
     parentSection.appendChild(parentHeader);
     parentSection.appendChild(childSettings);
     container.appendChild(parentSection);
+
+    // Dynamic visibility for randomizeBuildProps
+    if (key === 'randomizeBuildProps') {
+        const filterDbCheckbox = childSettings.querySelector(`[data-path$=".filterDevicesDatabase"]`);
+        const filtersEditor = childSettings.querySelector(`[data-path$=".devicesDatabaseFilters"]`)?.closest('.editor-simple-setting');
+        const useVersionCheckbox = childSettings.querySelector(`[data-path$=".devicesDatabaseUseAndroidVersion"]`);
+        const sdkVersionsEditor = childSettings.querySelector(`[data-path$=".devicesDatabaseSdkVersions"]`)?.closest('.editor-simple-setting');
+
+        const toggleVisibility = (checkbox, editor) => {
+            if (editor) {
+                editor.style.transition = 'opacity 0.3s';
+                editor.style.opacity = checkbox.checked ? '1' : '0.5';
+                editor.querySelectorAll('input, textarea, select').forEach(el => el.disabled = !checkbox.checked);
+            }
+        };
+
+        if (filterDbCheckbox && filtersEditor) {
+            filterDbCheckbox.addEventListener('change', () => toggleVisibility(filterDbCheckbox, filtersEditor));
+            toggleVisibility(filterDbCheckbox, filtersEditor);
+        }
+        if (useVersionCheckbox && sdkVersionsEditor) {
+            useVersionCheckbox.addEventListener('change', () => toggleVisibility(useVersionCheckbox, sdkVersionsEditor));
+            toggleVisibility(useVersionCheckbox, sdkVersionsEditor);
+        }
+    }
     
     return container;
 }
@@ -902,16 +1235,10 @@ function buildEnhancedSimpleEditor(key, category, customDataPath = null) {
     const dataPath = customDataPath || `${category}.${key}`;
     const value = getValueByPath(jsonConfig, dataPath.split('.'));
     
-    // Setting label
     const label = document.createElement('label');
     label.className = 'editor-setting-label';
-    label.innerHTML = `
-        ${getSettingTypeIndicator(key, value)}
-        <strong>${formatLabel(key)}</strong>
-        ${getSettingDescription(key)}
-    `;
+    label.innerHTML = `${getSettingTypeIndicator(key, value)} <strong>${formatLabel(key)}</strong> ${getSettingDescription(key)}`;
     
-    // Control container
     const controlContainer = document.createElement('div');
     controlContainer.style.marginTop = '12px';
     
@@ -925,43 +1252,61 @@ function buildEnhancedSimpleEditor(key, category, customDataPath = null) {
 }
 
 function createEnhancedInputControl(key, value, dataPath, category) {
-    const originalOptions = getValueByPath(originalJsonConfig, `${category}.${key}`.split('.'));
-    
-    // Boolean input
+    // Boolean
     if (typeof value === 'boolean') {
         const container = document.createElement('div');
         container.className = 'editor-checkbox-row';
-        
         const checkbox = document.createElement('input');
         checkbox.type = 'checkbox';
         checkbox.checked = value;
         checkbox.dataset.path = dataPath;
-        
         const label = document.createElement('label');
         label.textContent = value ? 'Enabled ✅' : 'Disabled ❌';
-        
-        checkbox.onchange = () => {
-            label.textContent = checkbox.checked ? 'Enabled ✅' : 'Disabled ❌';
-        };
-        
-        container.appendChild(checkbox);
-        container.appendChild(label);
+        checkbox.onchange = () => { label.textContent = checkbox.checked ? 'Enabled ✅' : 'Disabled ❌'; };
+        container.append(checkbox, label);
         return container;
     }
     
-    // Array input (dropdown + custom option)
+    // Object of booleans (for SDK versions)
+    if (key === 'devicesDatabaseSdkVersions' && typeof value === 'object' && value !== null && !Array.isArray(value)) {
+        const sdkContainer = document.createElement('div');
+        sdkContainer.style.cssText = 'padding: 10px; border: 1px solid #eee; border-radius: 8px;';
+        for (const sdkVersion in value) {
+            if (Object.hasOwnProperty.call(value, sdkVersion)) {
+                const row = document.createElement('div');
+                row.className = 'editor-checkbox-row';
+                row.style.cssText = 'background: none; border: none; padding: 8px 0;';
+                const checkbox = document.createElement('input');
+                checkbox.type = 'checkbox';
+                checkbox.checked = value[sdkVersion];
+                checkbox.dataset.path = `${dataPath}.${sdkVersion}`;
+                const label = document.createElement('label');
+                label.textContent = `Android SDK ${sdkVersion}`;
+                row.append(checkbox, label);
+                sdkContainer.appendChild(row);
+            }
+        }
+        return sdkContainer;
+    }
+    
+    // Array of strings (for dialogs/filters)
+    if (Array.isArray(value) && (key.toLowerCase().includes('strings') || key.toLowerCase().includes('filters'))) {
+        const textarea = document.createElement('textarea');
+        textarea.value = value.join('\n');
+        textarea.dataset.path = dataPath;
+        textarea.dataset.type = 'array-textarea';
+        textarea.placeholder = 'Enter one item per line...';
+        return textarea;
+    }
+
+    // Array of options (dropdown)
+    const originalOptions = getValueByPath(originalJsonConfig, `${category}.${key}`.split('.'));
     if (Array.isArray(value) || Array.isArray(originalOptions)) {
         const container = document.createElement('div');
-        
         const select = document.createElement('select');
         select.dataset.path = dataPath;
-        
         const currentValue = Array.isArray(value) ? value[0] : value;
-        const isCustomValue = keysWithCustomOption.includes(key) && 
-            Array.isArray(originalOptions) && 
-            !originalOptions.includes(currentValue);
-        
-        // Add original options
+        const isCustomValue = keysWithCustomOption.includes(key) && Array.isArray(originalOptions) && !originalOptions.includes(currentValue);
         if (Array.isArray(originalOptions)) {
             originalOptions.forEach(option => {
                 const optionEl = document.createElement('option');
@@ -971,8 +1316,6 @@ function createEnhancedInputControl(key, value, dataPath, category) {
                 select.appendChild(optionEl);
             });
         }
-        
-        // Add custom option if supported
         if (keysWithCustomOption.includes(key)) {
             const customOption = document.createElement('option');
             customOption.value = 'custom';
@@ -980,65 +1323,44 @@ function createEnhancedInputControl(key, value, dataPath, category) {
             if (isCustomValue) customOption.selected = true;
             select.appendChild(customOption);
         }
-        
-        // Custom input container
         const customContainer = document.createElement('div');
         customContainer.className = 'custom-input-container';
         customContainer.style.display = isCustomValue ? 'flex' : 'none';
-        
         const customInput = document.createElement('input');
         customInput.type = 'text';
         customInput.placeholder = 'Enter custom value...';
         customInput.dataset.path = `${dataPath}-custom`;
         if (isCustomValue) customInput.value = currentValue;
-        
-        const generatableKeys = [
-            'changeAndroidId', 'changeImei', 'changeImsi', 'changeAndroidSerial', 
-            'changeWifiMacAddress', 'changeBluetoothMacAddress', 'changeEthernetMacAddress',
-            'changeGoogleAdvertisingId', 'changeGoogleServiceFrameworkId',
-            'changeFacebookAttributionId', 'changeAppSetId', 'changeOpenId', 
-            'changeAmazonAdvertisingId', 'changeHuaweiAdvertisingId'
-        ];
-        
-        // Generate button for ID-type fields
+        const generatableKeys = ['changeAndroidId', 'changeImei', 'changeImsi', 'changeAndroidSerial', 'changeWifiMacAddress', 'changeBluetoothMacAddress', 'changeEthernetMacAddress','changeGoogleAdvertisingId', 'changeGoogleServiceFrameworkId','changeFacebookAttributionId', 'changeAppSetId', 'changeOpenId', 'changeAmazonAdvertisingId', 'changeHuaweiAdvertisingId'];
         if (generatableKeys.includes(key)) {
             const generateBtn = document.createElement('button');
             generateBtn.type = 'button';
             generateBtn.className = 'generate-btn';
             generateBtn.textContent = '🎲 Generate';
-            generateBtn.onclick = () => {
-                customInput.value = generateRandomValue(key);
-            };
-            customContainer.appendChild(customInput);
-            customContainer.appendChild(generateBtn);
+            generateBtn.onclick = () => { customInput.value = generateRandomValue(key); };
+            customContainer.append(customInput, generateBtn);
         } else {
             customContainer.appendChild(customInput);
         }
-        
-        // Toggle custom input visibility
         select.onchange = () => {
             customContainer.style.display = select.value === 'custom' ? 'flex' : 'none';
-            if (select.value === 'custom') {
-                setTimeout(() => customInput.focus(), 100);
-            }
+            if (select.value === 'custom') setTimeout(() => customInput.focus(), 100);
         };
-        
-        container.appendChild(select);
-        container.appendChild(customContainer);
+        container.append(select, customContainer);
         return container;
     }
     
-    // Number input
-    if (typeof value === 'number') {
+    // Number (including lat/lon)
+    if (typeof value === 'number' || key.toLowerCase().includes('latitude') || key.toLowerCase().includes('longitude')) {
         const input = document.createElement('input');
         input.type = 'number';
         input.value = value;
         input.dataset.path = dataPath;
-        input.step = Number.isInteger(value) ? '1' : '0.1';
+        input.step = 'any';
         return input;
     }
     
-    // Object/JSON input
+    // Object/JSON
     if (typeof value === 'object' && value !== null) {
         const textarea = document.createElement('textarea');
         textarea.value = JSON.stringify(value, null, 2);
@@ -1047,7 +1369,7 @@ function createEnhancedInputControl(key, value, dataPath, category) {
         return textarea;
     }
     
-    // Text input (default)
+    // Text (default)
     const input = document.createElement('input');
     input.type = 'text';
     input.value = value || '';
@@ -1058,142 +1380,118 @@ function createEnhancedInputControl(key, value, dataPath, category) {
 
 // --- Enhanced Utility Functions ---
 function getValueByPath(obj, path) {
-    let current = obj;
-    for (const key of path) {
-        if (current && typeof current === 'object' && key in current) {
-            current = current[key];
-        } else {
-            return undefined;
-        }
-    }
-    return current;
+    return path.reduce((current, key) => (current && typeof current === 'object' && key in current) ? current[key] : undefined, obj);
 }
 
 function getSettingDescription(key) {
     const descriptions = {
-        'changePackageName': '<br><small>🏷️ Modify the app package identifier</small>',
-        'changeAppName': '<br><small>📱 Change the display name of the app</small>',
-        'changeAndroidId': '<br><small>🔑 Unique device identifier</small>',
-        'changeImei': '<br><small>📞 Mobile device identifier</small>',
-        'hideAppIcon': '<br><small>👁️ Make app icon invisible in launcher</small>',
-        'preventUninstall': '<br><small>🛡️ Protect app from removal</small>',
-        'disableAds': '<br><small>🚫 Block advertisement content</small>',
-        'enableDebugMode': '<br><small>🐛 Enable development debugging</small>',
-        'buildPropsEnablePlaceholders': '<br><small>🔄 Use placeholders like [RANDOM] in fields above.</small>',
-        'dnsOverHttpsUrl': '<br><small>🌐 URL of the DNS-over-HTTPS provider (e.g., https://dns.google/dns-query).</small>'
+        'dnsOverHttpsCustomUrl': '<br><small>🌐 URL for the custom DNS provider.</small>',
     };
     return descriptions[key] || '';
 }
 
 function formatOptionText(option) {
     if (typeof option === 'boolean') return option ? '✅ Yes' : '❌ No';
-    if (typeof option === 'string' && option.length > 30) {
-        return option.substring(0, 27) + '...';
-    }
-    return String(option);
+    return String(option).length > 30 ? String(option).substring(0, 27) + '...' : String(option);
 }
 
 function formatLabel(key) {
-    return key.replace(/([A-Z])/g, ' $1')
-              .replace(/^./, str => str.toUpperCase())
-              .trim();
+    return key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase()).trim();
+}
+
+function generateRealisticCoordinates() {
+    const landmasses = [
+        { name: 'Europe', lat: [36, 71], lon: [-25, 65] },
+        { name: 'Asia', lat: [-11, 82], lon: [25, 180] },
+        { name: 'Africa', lat: [-35, 38], lon: [-18, 52] },
+        { name: 'North America', lat: [5, 84], lon: [-168, -52] },
+        { name: 'South America', lat: [-56, 13], lon: [-82, -34] },
+        { name: 'Australia', lat: [-44, -10], lon: [112, 154] }
+    ];
+
+    const region = landmasses[Math.floor(Math.random() * landmasses.length)];
+    
+    const latitude = Math.random() * (region.lat[1] - region.lat[0]) + region.lat[0];
+    const longitude = Math.random() * (region.lon[1] - region.lon[0]) + region.lon[0];
+
+    return {
+        latitude: latitude.toFixed(6),
+        longitude: longitude.toFixed(6)
+    };
 }
 
 function generateRandomValue(key) {
-    const generateMacAddress = () => Array.from({length: 6}, () =>
-        Math.floor(Math.random() * 256).toString(16).padStart(2, '0')
-    ).join(':').toUpperCase();
-
-    const generateUuid = () => {
-        // Generates a valid v4 UUID
-        return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
-            var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
-            return v.toString(16);
-        });
-    };
-
-    const generateHex = (len) => Array.from({length: len}, () =>
-        Math.floor(Math.random() * 16).toString(16)).join('');
-
-    const generateDigits = (len) => Array.from({length: len}, () =>
-        Math.floor(Math.random() * 10)).join('');
-
+    const generateMacAddress = () => Array.from({length: 6}, () => Math.floor(Math.random() * 256).toString(16).padStart(2, '0')).join(':').toUpperCase();
+    const generateUuid = () => 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => { const r = Math.random() * 16 | 0, v = c === 'x' ? r : (r & 0x3 | 0x8); return v.toString(16); });
+    const generateHex = len => Array.from({length: len}, () => Math.floor(Math.random() * 16).toString(16)).join('');
+    const generateDigits = len => Array.from({length: len}, () => Math.floor(Math.random() * 10)).join('');
     const generators = {
-        'changeAndroidId': () => generateHex(16),
-        'changeImei': () => generateDigits(15),
-        'changeImsi': () => generateDigits(15),
+        'changeAndroidId': () => generateHex(16), 'changeImei': () => generateDigits(15), 'changeImsi': () => generateDigits(15),
         'changeAndroidSerial': () => 'AC' + Array.from({length: 12}, () => Math.floor(Math.random() * 36).toString(36).toUpperCase()).join(''),
-        'changeWifiMacAddress': generateMacAddress,
-        'changeBluetoothMacAddress': generateMacAddress,
-        'changeEthernetMacAddress': generateMacAddress,
-        'changeGoogleAdvertisingId': generateUuid,
-        'changeGoogleServiceFrameworkId': () => generateHex(16),
-        'changeFacebookAttributionId': generateUuid,
-        'changeAppSetId': generateUuid,
-        'changeOpenId': generateUuid,
-        'changeAmazonAdvertisingId': generateUuid,
-        'changeHuaweiAdvertisingId': generateUuid,
+        'changeWifiMacAddress': generateMacAddress, 'changeBluetoothMacAddress': generateMacAddress, 'changeEthernetMacAddress': generateMacAddress,
+        'changeGoogleAdvertisingId': generateUuid, 'changeGoogleServiceFrameworkId': () => generateHex(16), 'changeFacebookAttributionId': generateUuid,
+        'changeAppSetId': generateUuid, 'changeOpenId': generateUuid, 'changeAmazonAdvertisingId': generateUuid, 'changeHuaweiAdvertisingId': generateUuid,
     };
-    
-    const generator = generators[key];
-    return generator ? generator() : `custom_${Date.now()}`;
+    return generators[key] ? generators[key]() : `custom_${Date.now()}`;
 }
 
 // --- Enhanced Save Function ---
 function getUpdatedConfig() {
     const flatConfig = {};
-
     for (const category in jsonConfig) {
         const settings = jsonConfig[category];
         for (const key in settings) {
             if (!settings.hasOwnProperty(key)) continue;
 
-            // Skip child keys - they're handled by parents
-            if (allChildKeys.has(key)) continue;
+            if (NON_INTERACTIVE_DIRECTORY_KEYS.includes(key)) {
+                flatConfig[key] = originalJsonConfig[category][key]; 
+                continue;
+            }
+
+            if (allChildKeys.has(key) && !compoundSettingsMap.has(key)) continue;
 
             const value = settings[key];
             const isObjectParent = typeof value === 'object' && value !== null && !Array.isArray(value);
             const isBooleanParent = allParentKeys.has(key) && typeof value === 'boolean';
 
-            // Handle object parents
             if (isObjectParent) {
                 if (value.enabled) {
                     flatConfig[key] = value;
+                    const externalChildren = (parentChildMap.get(key) || []).filter(c => !value.hasOwnProperty(c));
+                    if (externalChildren.length > 0) {
+                        externalChildren.forEach(childKey => {
+                            if (settings[childKey] !== undefined) flatConfig[childKey] = settings[childKey];
+                        });
+                    }
                 }
                 continue;
             }
-
-            // Handle boolean parents
             if (isBooleanParent) {
                 if (value) {
                     flatConfig[key] = true;
-                    // Add enabled children
                     const children = parentChildMap.get(key) || [];
-                    children.forEach(childKey => {
-                        if (settings[childKey] !== undefined) {
-                            flatConfig[childKey] = settings[childKey];
-                        }
-                    });
+                    children.forEach(childKey => { if (settings[childKey] !== undefined) flatConfig[childKey] = settings[childKey]; });
                 }
                 continue;
             }
+            if (compoundSettingsMap.has(key)) {
+                flatConfig[key] = Array.isArray(value) ? value[0] : value;
+                const children = compoundSettingsMap.get(key) || [];
+                children.forEach(childKey => { if (settings[childKey] !== undefined) flatConfig[childKey] = settings[childKey]; });
+                continue;
+            }
 
-            // Handle simple settings
             const originalValue = originalJsonConfig[category]?.[key];
-            if (keysWithCustomOption.includes(key) && Array.isArray(value) && 
-                Array.isArray(originalValue) && value.length === 1 && 
-                !originalValue.includes(value[0])) {
+            if (keysWithCustomOption.includes(key) && Array.isArray(value) && Array.isArray(originalValue) && value.length === 1 && !originalValue.includes(value[0])) {
                 flatConfig[key] = "CUSTOM";
-                const customKeyName = 'custom' + key.charAt(6).toUpperCase() + key.slice(7);
-                flatConfig[customKeyName] = value[0];
-            } else if (Array.isArray(value)) {
+                flatConfig['custom' + key.charAt(6).toUpperCase() + key.slice(7)] = value[0];
+            } else if (Array.isArray(value) && !key.toLowerCase().includes('strings') && !key.toLowerCase().includes('filters') && key !== 'webViewUrlDataFilterList') {
                 flatConfig[key] = value[0];
             } else {
                 flatConfig[key] = value;
             }
         }
     }
-
     return flatConfig;
 }
 
@@ -1201,34 +1499,23 @@ function saveConfig() {
     let packageName = currentPackageName;
     if (!packageName) {
         packageName = prompt("📦 Package name not detected. Please enter it:");
-        if (!packageName) {
-            alert("❌ Save cancelled: Package name required.");
-            return;
-        }
+        if (!packageName) { alert("❌ Save cancelled: Package name required."); return; }
         updatePackageName(packageName);
     }
-    
     try {
         const finalFlatConfig = getUpdatedConfig();
         const jsonString = JSON.stringify(finalFlatConfig);
-        
-        // Save button loading state
         const saveBtn = document.querySelector('.save-btn');
         const originalText = saveBtn.innerHTML;
         saveBtn.innerHTML = '⏳ Saving...';
         saveBtn.disabled = true;
-        
         setTimeout(() => {
             if (window.Android && typeof window.Android.saveEncryptedConfig === 'function') {
                 window.Android.saveEncryptedConfig(jsonString, packageName, configFileSplitCount);
-                if (window.Android.showToast) {
-                    window.Android.showToast("✅ Configuration saved successfully!");
-                }
+                if (window.Android.showToast) window.Android.showToast("✅ Configuration saved successfully!");
             } else {
                 console.warn("🌐 Browser mode: Downloading config as JSON file.");
-                const blob = new Blob([JSON.stringify(finalFlatConfig, null, 2)], { 
-                    type: 'application/json;charset=utf-8' 
-                });
+                const blob = new Blob([JSON.stringify(finalFlatConfig, null, 2)], { type: 'application/json;charset=utf-8' });
                 const a = document.createElement('a');
                 a.href = URL.createObjectURL(blob);
                 a.download = `${packageName}_cloneSettings.json`;
@@ -1236,12 +1523,9 @@ function saveConfig() {
                 URL.revokeObjectURL(a.href);
                 alert("📥 Configuration downloaded as JSON file!");
             }
-            
-            // Reset button
             saveBtn.innerHTML = originalText;
             saveBtn.disabled = false;
         }, 500);
-        
     } catch (error) {
         alert(`❌ Save Error: ${error.message}`);
         console.error("Save Error:", error);
