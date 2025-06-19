@@ -2,34 +2,33 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale: 1.0">
-    <title>Appcloner Maker</title>
+    <meta name="viewport" content="width=device-width, initial-scale=0.95">
+    <title>Appcloner Maker - Enhanced Floating Editor</title>
     <style>
         :root {
           --primary-blue: #1a73e8;
           --hover-blue: #1557b0;
           --bg-gray: #f8f9fa;
           --border-gray: #dadce0;
+          --success-green: #34a853;
+          --warning-orange: #fbbc04;
+          --error-red: #ea4335;
         }
-
         body {
           font-family: 'Roboto', sans-serif;
           margin: 0;
           padding: 16px;
           background: white;
         }
-
         .container {
           max-width: 800px;
           margin: 0 auto;
         }
-
         .category {
           margin-bottom: 24px;
           border: 1px solid var(--border-gray);
           border-radius: 8px;
         }
-
         .category-header {
           background: var(--primary-blue);
           color: white;
@@ -41,119 +40,75 @@
           justify-content: space-between;
           align-items: center;
         }
-
         .category-content {
-          padding: 16px;
+          padding: 8px;
           display: none;
         }
-
         .category-content.active {
           display: block;
         }
-
-        .setting-group {
-          margin-bottom: 20px;
-          padding: 15px;
-          background-color: #f5f5f5;
-          border-radius: 8px;
-          box-shadow: 0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.24);
+        .chevron { 
+          transition: transform 0.3s; 
+          font-size: 16px;
         }
+        .chevron.active { transform: rotate(180deg); }
 
-        .setting-group h3 {
-          margin-top: 0;
-          margin-bottom: 15px;
-          color: var(--primary-blue);
-          font-size: 18px;
-          font-weight: 500;
+        /* Enhanced Setting Row */
+        .setting-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 14px 12px;
+            border-bottom: 1px solid #f0f0f0;
+            cursor: pointer;
+            transition: all 0.2s;
+            position: relative;
         }
-
-        .setting-group .setting {
-          margin-left: 15px;
-          margin-bottom: 12px;
+        .setting-row:last-child {
+            border-bottom: none;
         }
-
-        .setting {
-          margin-bottom: 12px;
+        .setting-row:hover {
+            background-color: var(--bg-gray);
+            transform: translateX(4px);
         }
-
-        .setting-label {
-          display: block;
-          margin-bottom: 8px;
-          color: #333;
-          font-weight: 500;
+        .setting-row.has-children::before {
+            content: '🗂️';
+            position: absolute;
+            left: -8px;
+            font-size: 12px;
+            opacity: 0.6;
         }
-
-        .setting select {
-          width: 100%;
-          padding: 12px;
-          border: 1px solid var(--border-gray);
-          border-radius: 4px;
-          font-size: 14px;
-          background: white;
-          cursor: pointer;
-          appearance: none;
-          -webkit-appearance: none;
-          background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%231a73e8'%3e%3cpath d='M7 10l5 5 5-5z'/%3e%3c/svg%3e");
-          background-repeat: no-repeat;
-          background-position: right 12px center;
-          background-size: 20px;
-          transition: border-color 0.2s, box-shadow 0.2s;
+        .setting-row-label {
+            font-weight: 500;
+            color: #333;
+            display: flex;
+            align-items: center;
+            gap: 8px;
         }
-
-        .setting select:hover {
-          border-color: var(--primary-blue);
+        .setting-row-type-badge {
+            font-size: 11px;
+            padding: 2px 6px;
+            border-radius: 8px;
+            background: var(--border-gray);
+            color: #666;
+            font-weight: normal;
         }
-
-        .setting select:focus {
-          outline: none;
-          border-color: var(--primary-blue);
-          box-shadow: 0 0 0 2px rgba(26, 115, 232, 0.2);
+        .setting-row-value {
+            font-size: 14px;
+            color: #555;
+            background-color: #eef2ff;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-weight: 500;
+            color: var(--primary-blue);
+            max-width: 200px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
         }
-
-        .setting select option {
-          padding: 12px;
-          font-size: 14px;
-        }
-
-        .setting input[type="text"],
-        .setting input[type="number"] {
-          width: 100%;
-          padding: 8px;
-          border: 1px solid var(--border-gray);
-          border-radius: 4px;
-          font-size: 14px;
-          box-sizing: border-box;
-        }
-
-        .setting input[type="checkbox"] {
-          margin-right: 8px;
-        }
-
-        .array-field {
-          border-left: 3px solid var(--primary-blue);
-          padding: 16px;
-          margin: 12px 0;
-          background: white;
-          border-radius: 0 4px 4px 0;
-          box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-        }
-
-        .array-field .setting-label {
-          color: var(--primary-blue);
-          font-size: 15px;
-          font-weight: 500;
-          margin-bottom: 12px;
-        }
-
-        .array-field select {
-          background-color: var(--bg-gray);
-        }
-
-        .array-field:hover {
-          border-left-color: var(--hover-blue);
-          background-color: var(--bg-gray);
-          transition: all 0.2s ease;
-        }
+        .setting-row-value.enabled { background-color: #e8f5e8; color: var(--success-green); }
+        .setting-row-value.disabled { background-color: #ffebee; color: var(--error-red); }
+        .setting-row-value.custom { background-color: #fff3e0; color: var(--warning-orange); }
 
         .save-btn {
           position: fixed;
@@ -167,429 +122,329 @@
           font-size: 16px;
           font-weight: 500;
           cursor: pointer;
-          box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+          box-shadow: 0 2px 8px rgba(0,0,0,0.2);
           z-index: 1000;
+          transition: all 0.2s;
+        }
+        .save-btn:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 4px 12px rgba(0,0,0,0.3);
         }
 
-        .chevron {
-          transition: transform 0.3s;
-        }
-        .chevron.active {
-          transform: rotate(180deg);
-        }
-
-        #loading {
-          display: none;
-          text-align: center;
-          padding: 20px;
-        }
-
-        .error-message {
-          color: #d32f2f;
-          padding: 10px;
-          margin: 10px 0;
-          border-radius: 4px;
-          background: #ffebee;
-          display: none;
-        }
-
-        .setting-checkbox {
-          position: relative;
-          display: flex;
-          align-items: center;
-          padding: 12px;
-          background: var(--bg-gray);
-          border-radius: 4px;
-          cursor: pointer;
-          transition: all 0.2s ease;
-        }
-
-        .setting-checkbox:hover {
-          background: #eef2ff;
-        }
-
-        .setting-checkbox input[type="checkbox"] {
-          position: absolute;
-          opacity: 0;
-          cursor: pointer;
-          height: 0;
-          width: 0;
-        }
-
-        .checkmark {
-          position: relative;
-          height: 24px;
-          width: 48px;
-          background-color: #ccc;
-          border-radius: 12px;
-          transition: all 0.3s ease;
-          flex-shrink: 0;
-        }
-
-        .checkmark:before {
-          content: '';
-          position: absolute;
-          height: 20px;
-          width: 20px;
-          left: 2px;
-          bottom: 2px;
-          background-color: white;
-          border-radius: 50%;
-          transition: all 0.3s ease;
-        }
-
-        .setting-checkbox input:checked ~ .checkmark {
-          background-color: var(--primary-blue);
-        }
-
-        .setting-checkbox input:checked ~ .checkmark:before {
-          transform: translateX(24px);
-        }
-
-        .setting-checkbox .toggle-label {
-          margin-left: 12px;
-          font-weight: 500;
-          color: #333;
-          flex-grow: 1;
-        }
-
-        .setting-checkbox .toggle-status {
-          margin-left: auto;
-          font-size: 14px;
-          color: #666;
-          white-space: nowrap;
-          padding-left: 10px;
-        }
-
-        .slider-container {
-          display: flex;
-          align-items: center;
-          gap: 12px;
-        }
-
-        .slider-value {
-          min-width: 48px;
-          padding: 4px 8px;
-          background: var(--primary-blue);
-          color: white;
-          border-radius: 4px;
-          text-align: center;
-          font-size: 14px;
-          white-space: nowrap;
-        }
-
-        input[type="range"] {
-          flex-grow: 1;
-          height: 4px;
-          background: var(--border-gray);
-          border-radius: 2px;
-          appearance: none;
-        }
-        .array-container {
-            margin-bottom: 15px;
-        }
-
-        .array-item {
-            display: flex;
+        /* Enhanced Floating Editor */
+        .floating-editor-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.6);
+            display: none;
             align-items: center;
-            margin-bottom: 10px;
+            justify-content: center;
+            z-index: 2000;
+            opacity: 0;
+            transition: opacity 0.3s ease-in-out;
+            backdrop-filter: blur(4px);
         }
-
-        .array-item input {
-            flex-grow: 1;
-            margin-right: 10px;
+        .floating-editor-overlay.visible {
+            display: flex;
+            opacity: 1;
         }
-
-        .object-item {
-            flex-wrap: wrap;
-            background-color: #f0f0f0;
-            padding: 10px;
-            border-radius: 5px;
-            margin-bottom: 10px;
-        }
-
-        .object-field {
+        .floating-editor-content {
+            background-color: white;
+            border-radius: 12px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+            width: 90%;
+            max-width: 600px;
+            max-height: 90vh;
             display: flex;
             flex-direction: column;
-            margin-right: 15px;
-            margin-bottom: 5px;
+            transform: scale(0.9) translateY(20px);
+            transition: transform 0.3s ease-in-out;
         }
-
-        .object-field label {
-            margin-bottom: 2px;
-            font-size: 12px;
-            color: #666;
+        .floating-editor-overlay.visible .floating-editor-content {
+            transform: scale(1) translateY(0);
         }
-
-        .add-item, .add-complex-item, .remove-item {
-            background-color: var(--primary-blue);
-            color: white;
-            border: none;
-            padding: 5px 10px;
-            border-radius: 3px;
-            cursor: pointer;
-            font-size: 14px;
-        }
-
-        .remove-item {
-            background-color: #d32f2f;
-        }
-
-        .add-item:hover, .add-complex-item:hover, .remove-item:hover {
-            opacity: 0.8;
-        }
-        input[type="range"]::-webkit-slider-thumb {
-          appearance: none;
-          width: 16px;
-          height: 16px;
-          background: var(--primary-blue);
-          border-radius: 50%;
-          cursor: pointer;
-          transition: all 0.2s ease;
-        }
-
-        input[type="range"]::-webkit-slider-thumb:hover {
-          transform: scale(1.2);
-          background: var(--hover-blue);
-        }
-
-        /* Hide child settings initially */
-        .child-settings-container {
-            display: none;
-            margin-left: 20px; /* Indent child settings */
-            margin-top: 10px; /* Space below parent toggle */
-            padding-left: 15px; /* Further indent content */
-            border-left: 2px solid var(--border-gray); /* Visual cue */
-        }
-
-        .child-settings-container.active {
-            display: block;
-        }
-        .child-setting {
-            margin-bottom: 15px; /* Space between child settings */
-        }
-
-        #package-info {
-          display: none;
-        }
-
-        .custom-input-container {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            margin-top: 8px;
-        }
-
-        .custom-input-container .custom-input {
-            flex-grow: 1;
-            margin-top: 0;
-            width: auto;
-            margin-bottom: 0 !important;
-        }
-
-        .generate-btn {
-            padding: 8px 12px;
-            background-color: var(--primary-blue);
-            color: white;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 14px;
-            font-weight: 500;
-            white-space: nowrap;
-            transition: background-color 0.2s;
-            flex-shrink: 0;
-        }
-
-        .generate-btn:hover {
-            background-color: var(--hover-blue);
-        }
-
-        .array-field .custom-input-container input[type="text"] {
-            width: auto;
-        }
-
-        /* String Array Editor (for empty arrays) & Directory List共通のスタイル調整 */
-        .string-array-editor,
-        .directory-list-container {
-            margin-bottom: 16px;
-            border-left: 4px solid var(--primary-blue);
-            padding-left: 12px;
-            background: #f9f9f9;
-            border-radius: 0 4px 4px 0;
-        }
-
-        .string-array-editor-header,
-        .directory-list-header {
+        .floating-editor-header {
+            padding: 1.5rem;
+            font-size: 1.3rem;
+            font-weight: 600;
+            color: #111;
+            border-bottom: 2px solid var(--border-gray);
+            background: linear-gradient(135deg, var(--bg-gray) 0%, #ffffff 100%);
+            border-radius: 12px 12px 0 0;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            cursor: pointer;
-            padding: 12px 0;
         }
-        .string-array-editor-header:hover,
-        .directory-list-header:hover {
-            background-color: #f0f0f0;
-        }
-
-        .string-array-editor-name,
-        .directory-name {
-            font-weight: 500;
-            color: var(--primary-blue);
-            flex-grow: 1;
-        }
-
-        .string-array-options-count,
-        .options-count {
-            margin-left: 8px;
-            color: #666;
-            font-size: 14px;
-            white-space: nowrap;
-        }
-
-        .string-array-dropdown-arrow,
-        .dropdown-arrow {
-            transition: transform 0.3s;
-            padding: 0 8px;
-        }
-
-        .string-array-dropdown-arrow.expanded,
-        .dropdown-arrow.expanded {
-            transform: rotate(180deg);
-        }
-
-        .string-array-editor-content,
-        .directory-list-content {
-            padding: 12px 0 12px 16px;
-            display: none;
-            border-top: 1px solid #eee;
-            margin-top: 8px;
-        }
-
-        .string-array-editor-content.active,
-        .directory-list-content.active {
-            display: block;
-        }
-
-        .string-array-textarea,
-        .directory-textarea {
-            width: 100%;
-            min-height: 100px;
-            padding: 8px 12px;
-            border: 1px solid var(--border-gray);
-            border-radius: 4px;
-            font-size: 14px;
-            font-family: monospace;
-            resize: vertical;
-            margin-bottom: 8px;
-            box-sizing: border-box;
-        }
-
-        .string-array-help-text,
-        .directory-help-text {
-            font-size: 12px;
-            color: #666;
-            margin-bottom: 12px;
-        }
-
-        .string-array-buttons,
-        .directory-buttons {
-            display: flex;
-            justify-content: flex-end;
-            gap: 8px;
-        }
-
-        .string-array-btn,
-        .directory-btn {
+        .editor-close-btn {
             background: none;
             border: none;
-            color: var(--primary-blue);
+            font-size: 24px;
+            cursor: pointer;
+            color: #666;
+            padding: 4px;
+            border-radius: 50%;
+            transition: all 0.2s;
+        }
+        .editor-close-btn:hover {
+            background: rgba(0,0,0,0.1);
+            color: var(--error-red);
+        }
+        .floating-editor-body {
+            padding: 1.5rem;
+            overflow-y: auto;
+            flex-grow: 1;
+        }
+        .floating-editor-footer {
+            padding: 1rem 1.5rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 1rem;
+            border-top: 2px solid var(--border-gray);
+            background-color: var(--bg-gray);
+            border-radius: 0 0 12px 12px;
+        }
+        .editor-footer-info {
+            font-size: 12px;
+            color: #666;
+        }
+        .editor-footer-buttons {
+            display: flex;
+            gap: 0.5rem;
+        }
+        .editor-button {
+            padding: 0.6rem 1.2rem;
+            border: 2px solid transparent;
+            border-radius: 8px;
+            font-size: 0.9rem;
             font-weight: 500;
             cursor: pointer;
-            padding: 8px 12px;
-            font-size: 14px;
-            border-radius: 4px;
+            transition: all 0.2s;
+            background-color: transparent;
+            color: var(--primary-blue);
         }
-
-        .string-array-btn:hover,
-        .directory-btn:hover {
-            background-color: rgba(26, 115, 232, 0.1);
-        }
-
-        .string-array-btn.primary,
-        .directory-btn.primary {
+        .editor-button.primary {
             background-color: var(--primary-blue);
             color: white;
+            border-color: var(--primary-blue);
         }
-
-        .string-array-btn.primary:hover,
-        .directory-btn.primary:hover {
+        .editor-button:hover { 
+            background-color: rgba(26, 115, 232, 0.1);
+            border-color: var(--primary-blue);
+        }
+        .editor-button.primary:hover { 
             background-color: var(--hover-blue);
+            transform: translateY(-1px);
         }
 
-        /* Styles for customCode and fridaScript textareas */
-        .setting textarea.code-input {
-          width: 100%;
-          min-height: 120px;
-          padding: 10px 12px;
-          border: 1px solid var(--border-gray);
-          border-radius: 4px;
-          font-size: 14px;
-          font-family: 'Menlo', 'Monaco', 'Consolas', 'Courier New', monospace;
-          resize: vertical;
-          margin-bottom: 8px;
-          box-sizing: border-box;
-          line-height: 1.5;
+        /* Enhanced Editor Controls */
+        .editor-setting { 
+            margin-bottom: 24px; 
+            border: 1px solid var(--border-gray);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        .editor-setting-label { 
+            display: block; 
+            margin-bottom: 8px; 
+            color: #333; 
+            font-weight: 600;
+            font-size: 15px;
+        }
+        .editor-parent-section {
+            background: linear-gradient(135deg, #f8f9ff 0%, #ffffff 100%);
+            border: 2px solid var(--primary-blue);
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        .editor-parent-header {
+            background: var(--primary-blue);
+            color: white;
+            padding: 12px 16px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .editor-parent-toggle {
+            width: 20px;
+            height: 20px;
+        }
+        .editor-child-settings {
+            padding: 16px;
+            border-left: 4px solid var(--primary-blue);
+            margin-left: 12px;
+            background: rgba(26, 115, 232, 0.02);
+            border-radius: 0 8px 8px 0;
+            transition: all 0.3s ease;
+        }
+        .editor-child-settings.disabled {
+            opacity: 0.5;
+            background: rgba(0,0,0,0.02);
+            border-left-color: #ccc;
+        }
+        .editor-simple-setting {
+            background: white;
+            border: 1px solid var(--border-gray);
+            border-radius: 8px;
+            padding: 16px;
+        }
+        .editor-checkbox-row {
+            display: flex;
+            align-items: center;
+            padding: 12px 16px;
+            background: linear-gradient(135deg, #f8f9ff 0%, #ffffff 100%);
+            border-radius: 8px;
+            border: 1px solid rgba(26, 115, 232, 0.2);
+        }
+        .editor-checkbox-row input[type="checkbox"] {
+            width: 20px;
+            height: 20px;
+            margin-right: 12px;
+            accent-color: var(--primary-blue);
+        }
+        .editor-checkbox-row label {
+            font-weight: 500;
+            color: #333;
+        }
+        .editor-setting input[type="text"], 
+        .editor-setting input[type="number"], 
+        .editor-setting select, 
+        .editor-setting textarea {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid var(--border-gray);
+            border-radius: 8px;
+            font-size: 14px;
+            box-sizing: border-box;
+            transition: all 0.2s;
+            font-family: inherit;
+        }
+        .editor-setting input:focus,
+        .editor-setting select:focus,
+        .editor-setting textarea:focus {
+            border-color: var(--primary-blue);
+            box-shadow: 0 0 0 3px rgba(26, 115, 232, 0.1);
+            outline: none;
+        }
+        .custom-input-container { 
+            display: flex; 
+            align-items: center; 
+            gap: 8px; 
+            margin-top: 8px; 
+        }
+        .generate-btn { 
+            padding: 10px 16px; 
+            background: linear-gradient(135deg, var(--primary-blue) 0%, var(--hover-blue) 100%);
+            color: white; 
+            border: none; 
+            border-radius: 8px; 
+            cursor: pointer; 
+            flex-shrink: 0;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+        .generate-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(26, 115, 232, 0.3);
+        }
+        .editor-setting textarea { 
+            min-height: 120px; 
+            font-family: 'Courier New', monospace;
+            resize: vertical;
+        }
+        .setting-type-indicator {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+        .type-parent { background: var(--primary-blue); }
+        .type-boolean { background: var(--success-green); }
+        .type-array { background: var(--warning-orange); }
+        .type-string { background: #9c27b0; }
+        .type-number { background: #ff5722; }
+        
+        #loading, #error-message { text-align: center; padding: 20px; }
+        #error-message { 
+            color: var(--error-red); 
+            background: #ffebee; 
+            border-radius: 8px;
+            border-left: 4px solid var(--error-red);
         }
 
-        .setting textarea.code-input:hover {
-          border-color: var(--primary-blue);
+        /* Animations */
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
         }
-
-        .setting textarea.code-input:focus {
-          outline: none;
-          border-color: var(--primary-blue);
-          box-shadow: 0 0 0 2px rgba(26, 115, 232, 0.2);
+        .setting-row {
+            animation: fadeInUp 0.3s ease-out;
         }
-
     </style>
 </head>
 <body>
+
 <div class="container">
-  <div id="package-info" style="display: none;">
-    <p>Package Name: <span id="packageNameDisplay">Not detected yet</span></p>
-    <p>Split Count: <span id="splitCountDisplay">101 (default)</span></p>
+  <div id="package-info" style="padding: 16px; background: linear-gradient(135deg, #eef2ff 0%, #f8f9ff 100%); border-radius: 12px; margin-bottom: 16px; display: none; border: 1px solid rgba(26, 115, 232, 0.2);">
+    <p style="margin: 0 0 8px 0;"><strong>📦 Package:</strong> <span id="packageNameDisplay" style="color: var(--primary-blue);">Not detected</span></p>
+    <p style="margin: 0;"><strong>🔢 Split Count:</strong> <span id="splitCountDisplay" style="color: var(--primary-blue);">101</span></p>
   </div>
-
-  <div id="loading">Loading configuration...</div>
-  <div id="error-message" class="error-message"></div>
-
+  <div id="loading">⏳ Loading configuration...</div>
+  <div id="error-message" class="error-message" style="display: none;"></div>
   <div id="config-container"></div>
+  <button class="save-btn" onclick="saveConfig()">💾 Save Settings</button>
+</div>
 
-  <button class="save-btn" onclick="saveConfig()">Save Settings</button>
+<!-- Enhanced Floating Editor -->
+<div id="floating-editor-overlay" class="floating-editor-overlay">
+    <div id="floating-editor-content" class="floating-editor-content">
+        <div id="floating-editor-header" class="floating-editor-header">
+            <span id="floating-editor-title">Edit Setting</span>
+            <button class="editor-close-btn" onclick="closeFloatingEditor()">&times;</button>
+        </div>
+        <div id="floating-editor-body" class="floating-editor-body"></div>
+        <div class="floating-editor-footer">
+            <div class="editor-footer-info" id="editor-info"></div>
+            <div class="editor-footer-buttons">
+                <button id="editor-cancel-btn" class="editor-button">Cancel</button>
+                <button id="editor-save-btn" class="editor-button primary">Save Changes</button>
+            </div>
+        </div>
+    </div>
 </div>
 
 <script>
-// Constants for API access
+// --- Enhanced Constants and State ---
 const BIN_ID = '67fe9e1f8960c979a585d694';
 const API_KEY = '$2a$10$SgT4qoOKXP6CD4u1jPEpduwi.2NbrCqV2u71AaL7mGaW.77CmNU7u';
+let jsonConfig = {};
+let originalJsonConfig = {};
+let currentPackageName = "";
+let configFileSplitCount = 101;
+let allChildKeys = new Set();
+let allParentKeys = new Set();
+let parentChildMap = new Map(); // Maps parent keys to their children
+
+const keysWithCustomOption = [
+    'changeAndroidId', 'changeImei', 'changeAndroidSerial', 'changeWifiMacAddress',
+    'changeBluetoothMacAddress', 'changeImsi', 'changeGoogleAdvertisingId', 'changeGoogleServiceFrameworkId',
+    'changeFacebookAttributionId', 'changeAppSetId', 'changeOpenId', 'changeAmazonAdvertisingId', 
+    'changeHuaweiAdvertisingId', 'changeLocale', 'changeEthernetMacAddress'
+];
 
 const NON_INTERACTIVE_DIRECTORY_KEYS = ['addPermissions', 'addProviders', 'addReceivers','addServices','addActivities','stringsProperties','serialFormat'];
 
-let jsonConfig = {};
-let currentPackageName = "";
-let configFileSplitCount = 101;
-
+// --- Enhanced Initialization ---
 document.addEventListener('DOMContentLoaded', loadConfiguration);
 
 async function loadConfiguration() {
-    const loading = document.getElementById('loading');
-    const errorMessage = document.getElementById('error-message');
-    const container = document.getElementById('config-container');
-    loading.style.display = 'block';
-    errorMessage.style.display = 'none';
-    container.innerHTML = '';
-
+    const loadingEl = document.getElementById('loading');
+    const errorEl = document.getElementById('error-message');
     try {
         const response = await fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}/latest`, {
             headers: { 'X-Master-Key': API_KEY }
@@ -597,776 +452,801 @@ async function loadConfiguration() {
         if (!response.ok) throw new Error(`Failed to load configuration (Status: ${response.status})`);
         const data = await response.json();
         jsonConfig = data.record;
+        originalJsonConfig = JSON.parse(JSON.stringify(jsonConfig));
+        
+        analyzeParentChildRelationships();
         renderConfiguration(jsonConfig);
-        initializeEventListeners();
     } catch (error) {
-        errorMessage.textContent = `Error: ${error.message}`;
-        errorMessage.style.display = 'block';
+        errorEl.innerHTML = `<strong>❌ Error:</strong> ${error.message}`;
+        errorEl.style.display = 'block';
         console.error("Configuration Load Error:", error);
-        if (window.Android) window.Android.showToast(`Failed to load config: ${error.message}`);
     } finally {
-        loading.style.display = 'none';
+        loadingEl.style.display = 'none';
     }
 }
 
-function generateConfig() { return getUpdatedConfig(); }
+// --- Enhanced Parent-Child Analysis ---
+function analyzeParentChildRelationships() {
+    allChildKeys.clear();
+    allParentKeys.clear();
+    parentChildMap.clear();
+    
+    // Automatic detection rules
+    for (const category in jsonConfig) {
+        const settings = jsonConfig[category];
+        
+        for (const key in settings) {
+            // Rule 1: Object parents (have properties including 'enabled')
+            if (typeof settings[key] === 'object' && settings[key] !== null && !Array.isArray(settings[key])) {
+                allParentKeys.add(key);
+                const children = Object.keys(settings[key]).filter(childKey => childKey !== 'enabled');
+                parentChildMap.set(key, children);
+                children.forEach(child => allChildKeys.add(child));
+            }
+            
+            // Rule 2: Boolean parents (boolean keys that are prefixes of other keys)
+            if (typeof settings[key] === 'boolean') {
+                const relatedKeys = [];
+                for (const otherKey in settings) {
+                    if (key !== otherKey && otherKey.startsWith(key) && 
+                        otherKey.length > key.length &&
+                        otherKey.charAt(key.length) === otherKey.charAt(key.length).toUpperCase()) {
+                        relatedKeys.push(otherKey);
+                    }
+                }
+                if (relatedKeys.length > 0) {
+                    allParentKeys.add(key);
+                    parentChildMap.set(key, relatedKeys);
+                    relatedKeys.forEach(child => allChildKeys.add(child));
+                }
+            }
+        }
+    }
+
+    // --- START: Manual registration for groups with inconsistent naming ---
+
+    // Manual registration for 'buildsProps'
+    const buildPropsParent = 'buildsProps';
+    for (const category in jsonConfig) {
+        const settings = jsonConfig[category];
+        if (settings.hasOwnProperty(buildPropsParent)) {
+            const children = Object.keys(settings).filter(k => k.startsWith('buildProps'));
+            if (children.length > 0) {
+                allParentKeys.add(buildPropsParent);
+                parentChildMap.set(buildPropsParent, children);
+                children.forEach(child => allChildKeys.add(child));
+            }
+            break;
+        }
+    }
+
+    // Manual registration for 'dnsOverHttps'
+    const dohParent = 'dnsOverHttps';
+    for (const category in jsonConfig) {
+        const settings = jsonConfig[category];
+        if (settings.hasOwnProperty(dohParent)) {
+            // Find all keys that are likely children but aren't detected automatically
+            const children = Object.keys(settings).filter(k =>
+                k !== dohParent && (k.toLowerCase().includes('dns') || k.toLowerCase().includes('doh'))
+            );
+
+            if (children.length > 0) {
+                const existingChildren = parentChildMap.get(dohParent) || [];
+                const allChildren = [...new Set([...existingChildren, ...children])];
+
+                allParentKeys.add(dohParent);
+                parentChildMap.set(dohParent, allChildren);
+                allChildren.forEach(child => allChildKeys.add(child));
+            }
+            break;
+        }
+    }
+    // --- END: Manual registration ---
+    
+    console.log('🔍 Analysis Complete:', {
+        parents: Array.from(allParentKeys),
+        children: Array.from(allChildKeys),
+        relationships: Object.fromEntries(parentChildMap)
+    });
+}
+
+// --- Android Bridge ---
 function updatePackageName(packageName) {
     currentPackageName = packageName;
-    const el = document.getElementById('packageNameDisplay');
-    if (el) el.textContent = packageName;
-    if (window.Android) window.Android.showToast("Package name updated: " + packageName);
+    document.getElementById('packageNameDisplay').textContent = packageName;
+    document.getElementById('package-info').style.display = 'block';
 }
 function updateSplitCount(count) {
     configFileSplitCount = count;
-    const el = document.getElementById('splitCountDisplay');
-    if (el) el.textContent = count;
-    if (window.Android) window.Android.showToast("Split count updated: " + count);
+    document.getElementById('splitCountDisplay').textContent = count;
+    document.getElementById('package-info').style.display = 'block';
 }
 
+// --- Enhanced UI Rendering ---
 function renderConfiguration(config) {
     const container = document.getElementById('config-container');
     container.innerHTML = '';
+
     Object.entries(config).forEach(([category, settings]) => {
-        const filteredSettings = Object.fromEntries(
-            Object.entries(settings).filter(([key]) => !NON_INTERACTIVE_DIRECTORY_KEYS.includes(key) && key !== 'fakeWifiNetworks')
-        );
-        if (Object.keys(filteredSettings).length > 0) {
-            const categoryElement = createCategorySection(category, filteredSettings);
+        const categoryElement = document.createElement('div');
+        categoryElement.className = 'category';
+        
+        const header = document.createElement('div');
+        header.className = 'category-header';
+        header.innerHTML = `<span>📁 ${formatLabel(category)}</span><span class="chevron">⌵</span>`;
+        header.onclick = () => {
+            content.classList.toggle('active');
+            header.querySelector('.chevron').classList.toggle('active');
+        };
+        
+        const content = document.createElement('div');
+        content.className = 'category-content';
+        
+        // Only render main settings (parents and standalone settings)
+        for (const key in settings) {
+            if (Object.hasOwnProperty.call(settings, key) && 
+                !allChildKeys.has(key) && 
+                !NON_INTERACTIVE_DIRECTORY_KEYS.includes(key)) {
+                content.appendChild(createEnhancedSettingRow(key, settings[key], category));
+            }
+        }
+
+        if (content.hasChildNodes()) {
+            categoryElement.appendChild(header);
+            categoryElement.appendChild(content);
             container.appendChild(categoryElement);
         }
     });
 }
 
-function createCategorySection(category, settings) {
-    const section = document.createElement('div');
-    section.className = 'category';
-    const header = document.createElement('div');
-    header.className = 'category-header';
-    header.innerHTML = `<span>${formatLabel(category)}</span><span class="chevron">⌵</span>`;
-    const content = document.createElement('div');
-    content.className = 'category-content';
-
-    let settingKeys = Object.keys(settings);
-    for (let i = 0; i < settingKeys.length; i++) {
-        const key = settingKeys[i];
-        if (isChildSetting(key, settingKeys, settings)) continue;
-        const value = settings[key];
-        const settingElement = createSettingElement(key, value, category, settings);
-        if (settingElement) content.appendChild(settingElement);
+function createEnhancedSettingRow(key, value, category) {
+    const row = document.createElement('div');
+    row.className = 'setting-row';
+    
+    const isParent = allParentKeys.has(key);
+    if (isParent) {
+        row.classList.add('has-children');
     }
-    section.appendChild(header);
-    section.appendChild(content);
-    return section;
+    
+    row.dataset.key = key;
+    row.dataset.category = category;
+    row.onclick = () => openFloatingEditor(key, category);
+
+    const label = document.createElement('div');
+    label.className = 'setting-row-label';
+    
+    const typeIndicator = getSettingTypeIndicator(key, value);
+    const typeBadge = getSettingTypeBadge(key, value);
+    
+    label.innerHTML = `
+        ${typeIndicator}
+        <span>${formatLabel(key)}</span>
+        ${typeBadge}
+    `;
+
+    const valueDisplay = document.createElement('div');
+    valueDisplay.className = 'setting-row-value';
+    const {text, className} = getEnhancedSummaryText(key, value, category);
+    valueDisplay.textContent = text;
+    
+    if (className) {
+        valueDisplay.classList.add(className);
+    }
+    
+    row.appendChild(label);
+    row.appendChild(valueDisplay);
+    return row;
 }
 
-function isChildSetting(childKeyToCheck, allKeysInCategoryAsArray, allSettingsInCategoryObject) {
-    // *** MODIFICATION START: Add explicit rules for known parent-child groups ***
-    if (allKeysInCategoryAsArray.includes('buildsProps') && childKeyToCheck.startsWith('buildProps')) {
-        return true;
-    }
-    if (allKeysInCategoryAsArray.includes('androidVersion') && childKeyToCheck.startsWith('androidVersion') && childKeyToCheck !== 'androidVersion') {
-        return true;
-    }
-    // *** MODIFICATION END ***
+function getSettingTypeIndicator(key, value) {
+    if (allParentKeys.has(key)) return '<span class="setting-type-indicator type-parent"></span>';
+    if (typeof value === 'boolean') return '<span class="setting-type-indicator type-boolean"></span>';
+    if (Array.isArray(value)) return '<span class="setting-type-indicator type-array"></span>';
+    if (typeof value === 'number') return '<span class="setting-type-indicator type-number"></span>';
+    return '<span class="setting-type-indicator type-string"></span>';
+}
 
-    if (childKeyToCheck === 'fakeCalculatorCode' && allKeysInCategoryAsArray.includes('fakeCalculator')) {
-        return true;
+function getSettingTypeBadge(key, value) {
+    if (allParentKeys.has(key)) {
+        const childCount = parentChildMap.get(key)?.length || 0;
+        return `<span class="setting-row-type-badge">👥 ${childCount} options</span>`;
     }
-    if ((childKeyToCheck === 'appPatternSize' || childKeyToCheck === 'appPattern') && allKeysInCategoryAsArray.includes('patternLockApp')) {
-        return true;
+    if (typeof value === 'boolean') return '<span class="setting-row-type-badge">⏰ Toggle</span>';
+    if (Array.isArray(value)) return '<span class="setting-row-type-badge">📋 List</span>';
+    if (typeof value === 'number') return '<span class="setting-row-type-badge">🔢 Number</span>';
+    return '<span class="setting-row-type-badge">📝 Text</span>';
+}
+
+function getEnhancedSummaryText(key, value, category) {
+    const isObjectParent = typeof value === 'object' && value !== null && !Array.isArray(value);
+    const isBooleanParent = allParentKeys.has(key) && typeof value === 'boolean';
+    
+    if (isObjectParent) {
+        return {
+            text: value.enabled ? "✅ Enabled" : "❌ Disabled",
+            className: value.enabled ? "enabled" : "disabled"
+        };
+    }
+    if (isBooleanParent) {
+        return {
+            text: value ? "✅ Enabled" : "❌ Disabled", 
+            className: value ? "enabled" : "disabled"
+        };
+    }
+    
+    if (typeof value === 'boolean') {
+        return {
+            text: value ? "🟢 On" : "⚫ Off",
+            className: value ? "enabled" : "disabled"
+        };
     }
 
-    // Original generic check as a fallback
-    for (const parentKey of allKeysInCategoryAsArray) {
-        if (childKeyToCheck !== parentKey && childKeyToCheck.startsWith(parentKey)) {
-            const suffix = childKeyToCheck.substring(parentKey.length);
-            if (typeof allSettingsInCategoryObject[parentKey] === 'boolean' &&
-                suffix && (suffix[0] === suffix[0].toUpperCase() || !isNaN(parseInt(suffix[0])) || suffix === 'Value')) {
-                 return true;
-            }
+    if (Array.isArray(value)) {
+        if (value.length === 0) return {text: "[0 items]", className: "disabled"};
+        const originalOptions = originalJsonConfig[category]?.[key];
+        if (keysWithCustomOption.includes(key) && Array.isArray(originalOptions) && 
+            originalOptions.indexOf(value[0]) === -1) {
+            return {text: "🎨 Custom", className: "custom"};
         }
+        if (typeof value[0] === 'string') {
+            return {text: value[0], className: ""};
+        }
+        return {text: `[${value.length} items]`, className: ""};
     }
-    return false;
+    
+    if (typeof value === 'string' && value.length > 15) {
+        return {text: value.substring(0, 12) + '...', className: ""};
+    }
+    
+    return {text: value || 'Not set', className: value ? "" : "disabled"};
 }
 
-function createSettingElement(key, value, category, allSettingsInCategory) {
-    if (NON_INTERACTIVE_DIRECTORY_KEYS.includes(key) || key === 'fakeWifiNetworks') return null;
+// --- Enhanced Floating Editor ---
+const editorOverlay = document.getElementById('floating-editor-overlay');
+const editorTitle = document.getElementById('floating-editor-title');
+const editorBody = document.getElementById('floating-editor-body');
+const editorInfo = document.getElementById('editor-info');
 
-    const setting = document.createElement('div');
-    const dataPath = `${category}.${key}`;
-    const formattedLabel = formatLabel(key);
+function openFloatingEditor(key, category) {
+    const isParent = allParentKeys.has(key);
+    const children = parentChildMap.get(key) || [];
+    
+    editorTitle.innerHTML = `
+        ${getSettingTypeIndicator(key, jsonConfig[category][key])}
+        <strong>${formatLabel(key)}</strong>
+    `;
+    
+    editorInfo.textContent = isParent ? 
+        `Parent setting with ${children.length} child options` : 
+        'Simple setting';
+    
+    editorBody.innerHTML = '';
+    editorBody.appendChild(createEnhancedEditorControls(key, category));
+    editorOverlay.dataset.key = key;
+    editorOverlay.dataset.category = category;
+    editorOverlay.classList.add('visible');
+    
+    // Focus first input
+    setTimeout(() => {
+        const firstInput = editorBody.querySelector('input, select, textarea');
+        if (firstInput) firstInput.focus();
+    }, 300);
+}
 
-    if (Array.isArray(value) && value.length === 0) {
-        setting.className = 'string-array-editor setting';
-        const uniqueId = `${category}-${key}-${Date.now()}`;
-        setting.innerHTML = `
-            <div class="string-array-editor-header" data-target-content="content-${uniqueId}" data-target-arrow="arrow-${uniqueId}">
-                <span class="string-array-editor-name">${formattedLabel}</span>
-                <span class="string-array-options-count" id="count-${uniqueId}">Options: 0</span>
-                <span class="string-array-dropdown-arrow chevron" id="arrow-${uniqueId}">⌵</span>
-            </div>
-            <div class="string-array-editor-content" id="content-${uniqueId}">
-                <textarea class="string-array-textarea" id="textarea-${uniqueId}" placeholder="Enter one item per line..."></textarea>
-                <p class="string-array-help-text">Each line will be treated as a separate string in the array.</p>
-                <div class="string-array-buttons">
-                    <button type="button" class="string-array-btn sae-cancel-btn" data-textarea-id="textarea-${uniqueId}" data-category="${category}" data-key="${key}" data-count-id="count-${uniqueId}" data-content-id="content-${uniqueId}" data-arrow-id="arrow-${uniqueId}">Cancel</button>
-                    <button type="button" class="string-array-btn primary sae-apply-btn" data-textarea-id="textarea-${uniqueId}" data-category="${category}" data-key="${key}" data-count-id="count-${uniqueId}" data-content-id="content-${uniqueId}" data-arrow-id="arrow-${uniqueId}">Apply</button>
-                </div>
-            </div>
-        `;
-    } else if (Array.isArray(value) && value.length > 0 && typeof value[0] === 'object' && value[0] !== null) {
-        setting.className = 'setting-group';
-        setting.innerHTML = `<h3>${formattedLabel}</h3>`;
-        value.forEach((object, index) => {
-            const objectContainer = document.createElement('div');
-            objectContainer.className = 'object-item setting';
-            objectContainer.innerHTML = `<div class="setting-label" style="margin-bottom: 10px; font-weight: bold;">Item ${index + 1}</div>`;
-            Object.entries(object).forEach(([objKey, objValue]) => {
-                const fieldDiv = document.createElement('div');
-                fieldDiv.className = 'object-field';
-                const objDataPath = `${dataPath}[${index}].${objKey}`;
-                fieldDiv.innerHTML = `
-                    <label for="${key}-${index}-${objKey}">${formatLabel(objKey)}:</label>
-                    <input type="text"
-                        id="${key}-${index}-${objKey}"
-                        value="${objValue || ''}"
-                        data-path="${objDataPath}"
-                        data-key="${objKey}">
-                `;
-                objectContainer.appendChild(fieldDiv);
-            });
-            setting.appendChild(objectContainer);
-        });
-    } else if (typeof value === 'object' && value !== null && !Array.isArray(value) && Object.keys(value).some(k => !isNaN(parseInt(k)))) {
-        setting.className = 'setting-group';
-        setting.innerHTML = `<h3>${formattedLabel}</h3>`;
-        Object.entries(value).forEach(([objKey, objValue]) => {
-            if (typeof objValue === 'boolean') {
-                const fieldDiv = document.createElement('div');
-                fieldDiv.className = 'setting';
-                fieldDiv.style.marginLeft = '0';
-                const objDataPath = `${dataPath}.${objKey}`;
-                fieldDiv.innerHTML = `
-                    <label class="setting-checkbox">
-                        <input type="checkbox" data-path="${objDataPath}" data-key="${objKey}" ${objValue ? 'checked' : ''}>
-                        <span class="checkmark"></span>
-                        <span class="toggle-label">SDK Version ${objKey}</span>
-                        <span class="toggle-status">${objValue ? 'Enabled' : 'Disabled'}</span>
-                    </label>
-                `;
-                setting.appendChild(fieldDiv);
+function closeFloatingEditor() { 
+    editorOverlay.classList.remove('visible'); 
+}
+
+function saveEditorChanges() {
+    const key = editorOverlay.dataset.key;
+    const category = editorOverlay.dataset.category;
+    
+    editorBody.querySelectorAll('[data-path]').forEach(input => {
+        const path = input.dataset.path.split('.');
+        let value;
+        
+        if (input.type === 'checkbox') {
+            value = input.checked;
+        } else if (input.type === 'number') {
+            value = parseFloat(input.value);
+        } else if (input.tagName === 'TEXTAREA') {
+            try {
+                value = JSON.parse(input.value);
+            } catch {
+                value = input.value;
             }
-        });
-    } else if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
-        setting.className = 'setting-group';
-        setting.innerHTML = `<h3>${formattedLabel}</h3>`;
-        Object.entries(value).forEach(([objKey, objValue]) => {
-            const fieldDiv = document.createElement('div');
-            fieldDiv.className = 'setting';
-            fieldDiv.style.marginLeft = '0';
-            const objDataPath = `${dataPath}.${objKey}`;
-            let inputElement;
-            const objLabel = formatLabel(objKey);
-
-            if (typeof objValue === 'boolean') {
-                inputElement = `
-                    <label class="setting-checkbox">
-                        <input type="checkbox" data-path="${objDataPath}" data-key="${objKey}" ${objValue ? 'checked' : ''}>
-                        <span class="checkmark"></span>
-                        <span class="toggle-label">${objLabel}</span>
-                        <span class="toggle-status">${objValue ? 'Enabled' : 'Disabled'}</span>
-                    </label>
-                `;
-                 fieldDiv.innerHTML = inputElement;
-            } else {
-                if (typeof objValue === 'number') {
-                    inputElement = `<input type="number" data-path="${objDataPath}" data-key="${objKey}" value="${objValue}">`;
-                } else {
-                    inputElement = `<input type="text" data-path="${objDataPath}" data-key="${objKey}" value="${objValue || ''}">`;
-                }
-                 fieldDiv.innerHTML = `
-                    <label class="setting-label">${objLabel}</label>
-                    ${inputElement}
-                `;
-            }
-            setting.appendChild(fieldDiv);
-        });
-    } else if (Array.isArray(value)) {
-        setting.className = 'array-field setting';
-        const isIdentitySetting = key.startsWith('change') &&
-            (key.includes('Id') || key.includes('Mac') || key.includes('Imei') ||
-             key.includes('Imsi') || key.includes('Serial') || key.includes('Locale') ||
-             key.includes('Advertising') || key.includes('Address') || key.includes('Framework') ||
-             key.includes('UserAgent'));
-
-        const customInputId = `${category}-${key}-custom-input-${Date.now()}`;
-        setting.innerHTML = `
-            <label class="setting-label">
-                ${formattedLabel}
-                <span style="font-size: 12px; color: #666; margin-left: 8px;">
-                    (${value.length} options)
-                </span>
-            </label>
-            <select data-path="${dataPath}" data-key="${key}">
-                ${value.map(option => `<option value="${option}">${option}</option>`).join('')}
-                ${isIdentitySetting ? '<option value="custom">CUSTOM</option>' : ''}
-            </select>
-            ${isIdentitySetting ?
-              `<div class="custom-input-container" style="display:none;">
-                  <input type="text" id="${customInputId}" class="setting custom-input" data-path="${dataPath}" data-key="${key}-custom" placeholder="Enter custom value">
-                  <button type="button" class="generate-btn" data-target-input="${customInputId}" data-setting-key="${key}">Generate</button>
-               </div>` :
-              ''}
-        `;
-    } else if (typeof value === 'boolean') { // Standard boolean toggle
-        setting.className = 'setting';
-        setting.innerHTML = `
-            <label class="setting-checkbox">
-                <input type="checkbox" data-path="${dataPath}" data-key="${key}" ${value ? 'checked' : ''}>
-                <span class="checkmark"></span>
-                <span class="toggle-label">${formattedLabel}</span>
-                <span class="toggle-status">${value ? 'Enabled' : 'Disabled'}</span>
-            </label>
-        `;
-        const childSettingsContainer = document.createElement('div');
-        childSettingsContainer.className = 'child-settings-container';
-        childSettingsContainer.dataset.parentKey = key;
-
-        // *** MODIFICATION START: Refined logic for finding and grouping child settings ***
-        let childKeys = [];
-        if (key === 'buildsProps') {
-            childKeys = Object.keys(allSettingsInCategory).filter(k => k.startsWith('buildProps'));
-        } else if (key === 'androidVersion') {
-            childKeys = Object.keys(allSettingsInCategory).filter(k => k.startsWith('androidVersion') && k !== key);
-        } else if (key === 'fakeCalculator') {
-            childKeys = ['fakeCalculatorCode'];
-        } else if (key === 'patternLockApp') {
-            childKeys = ['appPatternSize', 'appPattern'];
         } else {
-            // Generic fallback for other potential parent-child relationships
-            for (const childKey in allSettingsInCategory) {
-                if (childKey.startsWith(key) && childKey !== key) {
-                    const suffix = childKey.substring(key.length);
-                    if (suffix && (suffix[0] === suffix[0].toUpperCase() || !isNaN(parseInt(suffix[0])) || suffix === 'Value')) {
-                        childKeys.push(childKey);
-                    }
-                }
-            }
+            value = input.value;
         }
         
-        // Render all found child keys
-        childKeys.forEach(childKey => {
-            if (allSettingsInCategory.hasOwnProperty(childKey)) {
-                const childValue = allSettingsInCategory[childKey];
-                const childSettingElement = createSettingElement(childKey, childValue, category, allSettingsInCategory);
-                if (childSettingElement) {
-                   childSettingElement.classList.add('child-setting');
-                   childSettingsContainer.appendChild(childSettingElement);
-                }
-            }
-        });
-        // *** MODIFICATION END ***
-
-        if (childSettingsContainer.hasChildNodes()) {
-            setting.appendChild(childSettingsContainer);
+        let current = jsonConfig;
+        for (let i = 0; i < path.length - 1; i++) {
+            current = current[path[i]];
         }
-    } else if (typeof value === 'number' && (key.includes('Battery') || key.includes('battery') || key.includes('Level'))) {
-        setting.className = 'setting';
-        let min = 0, max = 100, step = 1, unit = '%';
-        if (key.includes('Temp')) { min = -20; max = 80; unit = '°C'; }
-        else if (key.includes('Voltage')) { min = 3000; max = 4500; unit = 'mV'; step = 10; }
-        setting.innerHTML = `
-            <label class="setting-label">${formattedLabel}</label>
-            <div class="slider-container">
-                <input type="range" data-path="${dataPath}" data-key="${key}" value="${value}" min="${min}" max="${max}" step="${step}">
-                <span class="slider-value">${value}${unit}</span>
-            </div>
-        `;
-    } else if (typeof value === 'number') {
-        setting.className = 'setting';
-        setting.innerHTML = `
-            <label class="setting-label">${formattedLabel}</label>
-            <input type="number" data-path="${dataPath}" data-key="${key}" value="${value}">
-        `;
-    } else if (key === 'customCode' || key === 'fridaScript') { // ADDED FOR CUSTOM CODE AND FRIDA SCRIPT
-        setting.className = 'setting';
-        let placeholderText = `Enter code here...`;
-        if (key === 'customCode') {
-            placeholderText = `Enter Java code here...`;
-        } else if (key === 'fridaScript') {
-            placeholderText = `Enter Frida (JavaScript) code here...`;
-        }
-        setting.innerHTML = `
-            <label class="setting-label">${formattedLabel}</label>
-            <textarea class="code-input" data-path="${dataPath}" data-key="${key}" rows="8" placeholder="${placeholderText}">${value || ''}</textarea>
-        `;
-    } else {
-        if (key === 'appPassword') {
-            setting.className = 'setting';
-            const isEnabled = typeof value === 'string' && value !== "";
-            const toggleId = `${category}-${key}-enable-toggle-${Date.now()}`;
-            const passwordInputId = `input-${toggleId}`;
-
-            setting.innerHTML = `
-                <label class="setting-checkbox">
-                    <input type="checkbox" id="${toggleId}" data-controls-input-id="${passwordInputId}" ${isEnabled ? 'checked' : ''}>
-                    <span class="checkmark"></span>
-                    <span class="toggle-label">${formattedLabel} (Enable/Disable)</span>
-                    <span class="toggle-status">${isEnabled ? 'Enabled' : 'Disabled'}</span>
-                </label>
-                <div class="child-settings-container ${isEnabled ? 'active' : ''}" data-controlled-by-toggle-id="${toggleId}">
-                    <div class="child-setting">
-                        <label class="setting-label">Password Code</label>
-                        <input type="text" id="${passwordInputId}" data-path="${dataPath}" data-key="${key}" value="${value || ''}" placeholder="Enter password">
-                    </div>
-                </div>
-            `;
+        
+        if (input.tagName === 'SELECT' && value === 'custom') {
+            const customInput = editorBody.querySelector(`[data-path="${input.dataset.path}-custom"]`);
+            current[path[path.length - 1]] = [customInput.value];
+        } else if (Array.isArray(current[path[path.length-1]])) {
+             current[path[path.length-1]] = [value];
         } else {
-            setting.className = 'setting';
-            setting.innerHTML = `
-                <label class="setting-label">${formattedLabel}</label>
-                <input type="text" data-path="${dataPath}" data-key="${key}" value="${value || ''}">
-            `;
+            current[path[path.length - 1]] = value;
         }
+    });
+    
+    // Update UI
+    const settingRow = document.querySelector(`.setting-row[data-key="${key}"][data-category="${category}"]`);
+    if (settingRow) {
+        const valueDisplay = settingRow.querySelector('.setting-row-value');
+        const {text, className} = getEnhancedSummaryText(key, jsonConfig[category][key], category);
+        valueDisplay.textContent = text;
+        valueDisplay.className = `setting-row-value ${className}`.trim();
     }
-    return setting;
+    
+    closeFloatingEditor();
 }
 
-function generateRandomValue(settingKey) {
-    const keyLower = settingKey.toLowerCase();
-    const hex = () => Math.floor(Math.random() * 16).toString(16);
-    const generateUUID = () => `${Array.from({length: 8}, hex).join('')}-${Array.from({length: 4}, hex).join('')}-4${Array.from({length: 3}, hex).join('')}-${['8','9','a','b'][Math.floor(Math.random()*4)]}${Array.from({length: 3}, hex).join('')}-${Array.from({length: 12}, hex).join('')}`;
-    const generateAlphaNumUpper = (length) => { let r = ''; const c = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'; for (let i = 0; i < length; i++) r += c.charAt(Math.floor(Math.random() * c.length)); return r; };
+// Event Listeners
+document.getElementById('editor-save-btn').onclick = saveEditorChanges;
+document.getElementById('editor-cancel-btn').onclick = closeFloatingEditor;
+editorOverlay.onclick = (e) => { if (e.target === editorOverlay) closeFloatingEditor(); };
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && editorOverlay.classList.contains('visible')) {
+        closeFloatingEditor();
+    }
+});
 
-    if (keyLower.includes('wifimacaddress') || keyLower.includes('bluetoothmacaddress')) return Array.from({ length: 6 }, () => Math.floor(Math.random() * 256).toString(16).padStart(2, '0')).join(':').toUpperCase();
-    if (keyLower.includes('imei')) return Array.from({ length: 15 }, () => Math.floor(Math.random() * 10)).join('');
-    if (keyLower.includes('androidid')) return Array.from({ length: 16 }, hex).join('');
-    if (keyLower.includes('simserialnumber')) return Array.from({ length: Math.floor(Math.random() * 3) + 18 }, () => Math.floor(Math.random() * 10)).join('');
-    if (keyLower.includes('advertisingid')) return generateUUID();
-    if (keyLower.includes('imsi')) { const mcc = ['310', '311', '208', '234'][Math.floor(Math.random()*4)]; const mnc = ['150', '260', '410', '010', '020', '015', '020'][Math.floor(Math.random()*7)]; const msin = Array.from({ length: 10 }, () => Math.floor(Math.random()*10)).join(''); return mcc + mnc.padStart(3, '0') + msin; }
-    if (keyLower.includes('openid')) return generateUUID();
-    if (keyLower.includes('googleserviceframeworkid') || keyLower.includes('gsfid')) return Array.from({ length: 16 }, hex).join('');
-    if (keyLower.includes('facebookattributionid')) return generateUUID();
-    if (keyLower.includes('appsetid')) return generateUUID();
-    if (keyLower.includes('hardwareserial') || settingKey === 'changeAndroidSerial') return generateAlphaNumUpper(Math.floor(Math.random() * 7) + 10);
+function createEnhancedEditorControls(key, category) {
+    const container = document.createElement('div');
+    const value = jsonConfig[category][key];
+    const isParent = allParentKeys.has(key);
 
-    console.warn(`No specific random generator implemented for key: ${settingKey}. Returning placeholder.`);
-    return `RANDOM_${settingKey.replace(/([A-Z])/g, '_$1').toUpperCase()}`;
+    if (isParent) {
+        container.appendChild(buildEnhancedParentEditor(key, category));
+    } else {
+        container.appendChild(buildEnhancedSimpleEditor(key, category));
+    }
+    
+    return container;
+}
+
+function buildEnhancedParentEditor(key, category) {
+    const container = document.createElement('div');
+    const value = jsonConfig[category][key];
+    const children = parentChildMap.get(key) || [];
+    const dataPath = `${category}.${key}`;
+    const isObjectType = typeof value === 'object' && value !== null && !Array.isArray(value);
+    const isEnabled = isObjectType ? value.enabled : value;
+
+    // Parent section
+    const parentSection = document.createElement('div');
+    parentSection.className = 'editor-parent-section';
+    
+    // Parent header with toggle
+    const parentHeader = document.createElement('div');
+    parentHeader.className = 'editor-parent-header';
+    
+    const toggleContainer = document.createElement('div');
+    toggleContainer.className = 'editor-checkbox-row';
+    toggleContainer.style.background = 'transparent';
+    toggleContainer.style.border = 'none';
+    toggleContainer.style.padding = '0';
+    
+    const checkbox = document.createElement('input');
+    checkbox.type = 'checkbox';
+    checkbox.className = 'editor-parent-toggle';
+    checkbox.checked = isEnabled;
+    checkbox.dataset.path = isObjectType ? `${dataPath}.enabled` : dataPath;
+    
+    const label = document.createElement('label');
+    label.textContent = `Enable ${formatLabel(key)}`;
+    label.style.color = 'white';
+    label.style.fontWeight = '600';
+    
+    // Update child settings visibility when parent changes
+    checkbox.onchange = () => {
+        const childContainer = parentSection.querySelector('.editor-child-settings');
+        if (childContainer) {
+            if (checkbox.checked) {
+                childContainer.classList.remove('disabled');
+            } else {
+                childContainer.classList.add('disabled');
+            }
+        }
+    };
+    
+    toggleContainer.appendChild(checkbox);
+    toggleContainer.appendChild(label);
+    parentHeader.appendChild(toggleContainer);
+    
+    // Child settings container
+    const childSettings = document.createElement('div');
+    childSettings.className = `editor-child-settings ${!isEnabled ? 'disabled' : ''}`;
+    
+    if (children.length > 0) {
+        const childTitle = document.createElement('h4');
+        childTitle.textContent = `⚙️ ${formatLabel(key)} Options`;
+        childTitle.style.marginTop = '0';
+        childTitle.style.color = '#333';
+        childSettings.appendChild(childTitle);
+        
+        children.forEach(childKey => {
+            const childValue = isObjectType ? value[childKey] : jsonConfig[category][childKey];
+            if (childValue !== undefined) {
+                const childEditor = buildEnhancedSimpleEditor(
+                    childKey, 
+                    category, 
+                    isObjectType ? `${dataPath}.${childKey}` : `${category}.${childKey}`
+                );
+                childEditor.style.marginBottom = '16px';
+                childEditor.style.padding = '12px';
+                childEditor.style.background = 'rgba(255,255,255,0.7)';
+                childEditor.style.borderRadius = '6px';
+                childEditor.style.border = '1px solid #e0e0e0';
+                childSettings.appendChild(childEditor);
+            }
+        });
+    }
+    
+    parentSection.appendChild(parentHeader);
+    parentSection.appendChild(childSettings);
+    container.appendChild(parentSection);
+    
+    return container;
+}
+
+function buildEnhancedSimpleEditor(key, category, customDataPath = null) {
+    const container = document.createElement('div');
+    container.className = 'editor-simple-setting';
+    
+    const dataPath = customDataPath || `${category}.${key}`;
+    const value = getValueByPath(jsonConfig, dataPath.split('.'));
+    
+    // Setting label
+    const label = document.createElement('label');
+    label.className = 'editor-setting-label';
+    label.innerHTML = `
+        ${getSettingTypeIndicator(key, value)}
+        <strong>${formatLabel(key)}</strong>
+        ${getSettingDescription(key)}
+    `;
+    
+    // Control container
+    const controlContainer = document.createElement('div');
+    controlContainer.style.marginTop = '12px';
+    
+    const control = createEnhancedInputControl(key, value, dataPath, category);
+    controlContainer.appendChild(control);
+    
+    container.appendChild(label);
+    container.appendChild(controlContainer);
+    
+    return container;
+}
+
+function createEnhancedInputControl(key, value, dataPath, category) {
+    const originalOptions = getValueByPath(originalJsonConfig, `${category}.${key}`.split('.'));
+    
+    // Boolean input
+    if (typeof value === 'boolean') {
+        const container = document.createElement('div');
+        container.className = 'editor-checkbox-row';
+        
+        const checkbox = document.createElement('input');
+        checkbox.type = 'checkbox';
+        checkbox.checked = value;
+        checkbox.dataset.path = dataPath;
+        
+        const label = document.createElement('label');
+        label.textContent = value ? 'Enabled ✅' : 'Disabled ❌';
+        
+        checkbox.onchange = () => {
+            label.textContent = checkbox.checked ? 'Enabled ✅' : 'Disabled ❌';
+        };
+        
+        container.appendChild(checkbox);
+        container.appendChild(label);
+        return container;
+    }
+    
+    // Array input (dropdown + custom option)
+    if (Array.isArray(value) || Array.isArray(originalOptions)) {
+        const container = document.createElement('div');
+        
+        const select = document.createElement('select');
+        select.dataset.path = dataPath;
+        
+        const currentValue = Array.isArray(value) ? value[0] : value;
+        const isCustomValue = keysWithCustomOption.includes(key) && 
+            Array.isArray(originalOptions) && 
+            !originalOptions.includes(currentValue);
+        
+        // Add original options
+        if (Array.isArray(originalOptions)) {
+            originalOptions.forEach(option => {
+                const optionEl = document.createElement('option');
+                optionEl.value = option;
+                optionEl.textContent = formatOptionText(option);
+                if (currentValue === option) optionEl.selected = true;
+                select.appendChild(optionEl);
+            });
+        }
+        
+        // Add custom option if supported
+        if (keysWithCustomOption.includes(key)) {
+            const customOption = document.createElement('option');
+            customOption.value = 'custom';
+            customOption.textContent = '🎨 Custom Value';
+            if (isCustomValue) customOption.selected = true;
+            select.appendChild(customOption);
+        }
+        
+        // Custom input container
+        const customContainer = document.createElement('div');
+        customContainer.className = 'custom-input-container';
+        customContainer.style.display = isCustomValue ? 'flex' : 'none';
+        
+        const customInput = document.createElement('input');
+        customInput.type = 'text';
+        customInput.placeholder = 'Enter custom value...';
+        customInput.dataset.path = `${dataPath}-custom`;
+        if (isCustomValue) customInput.value = currentValue;
+        
+        const generatableKeys = [
+            'changeAndroidId', 'changeImei', 'changeImsi', 'changeAndroidSerial', 
+            'changeWifiMacAddress', 'changeBluetoothMacAddress', 'changeEthernetMacAddress',
+            'changeGoogleAdvertisingId', 'changeGoogleServiceFrameworkId',
+            'changeFacebookAttributionId', 'changeAppSetId', 'changeOpenId', 
+            'changeAmazonAdvertisingId', 'changeHuaweiAdvertisingId'
+        ];
+        
+        // Generate button for ID-type fields
+        if (generatableKeys.includes(key)) {
+            const generateBtn = document.createElement('button');
+            generateBtn.type = 'button';
+            generateBtn.className = 'generate-btn';
+            generateBtn.textContent = '🎲 Generate';
+            generateBtn.onclick = () => {
+                customInput.value = generateRandomValue(key);
+            };
+            customContainer.appendChild(customInput);
+            customContainer.appendChild(generateBtn);
+        } else {
+            customContainer.appendChild(customInput);
+        }
+        
+        // Toggle custom input visibility
+        select.onchange = () => {
+            customContainer.style.display = select.value === 'custom' ? 'flex' : 'none';
+            if (select.value === 'custom') {
+                setTimeout(() => customInput.focus(), 100);
+            }
+        };
+        
+        container.appendChild(select);
+        container.appendChild(customContainer);
+        return container;
+    }
+    
+    // Number input
+    if (typeof value === 'number') {
+        const input = document.createElement('input');
+        input.type = 'number';
+        input.value = value;
+        input.dataset.path = dataPath;
+        input.step = Number.isInteger(value) ? '1' : '0.1';
+        return input;
+    }
+    
+    // Object/JSON input
+    if (typeof value === 'object' && value !== null) {
+        const textarea = document.createElement('textarea');
+        textarea.value = JSON.stringify(value, null, 2);
+        textarea.dataset.path = dataPath;
+        textarea.placeholder = 'Enter valid JSON...';
+        return textarea;
+    }
+    
+    // Text input (default)
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.value = value || '';
+    input.dataset.path = dataPath;
+    input.placeholder = `Enter ${formatLabel(key).toLowerCase()}...`;
+    return input;
+}
+
+// --- Enhanced Utility Functions ---
+function getValueByPath(obj, path) {
+    let current = obj;
+    for (const key of path) {
+        if (current && typeof current === 'object' && key in current) {
+            current = current[key];
+        } else {
+            return undefined;
+        }
+    }
+    return current;
+}
+
+function getSettingDescription(key) {
+    const descriptions = {
+        'changePackageName': '<br><small>🏷️ Modify the app package identifier</small>',
+        'changeAppName': '<br><small>📱 Change the display name of the app</small>',
+        'changeAndroidId': '<br><small>🔑 Unique device identifier</small>',
+        'changeImei': '<br><small>📞 Mobile device identifier</small>',
+        'hideAppIcon': '<br><small>👁️ Make app icon invisible in launcher</small>',
+        'preventUninstall': '<br><small>🛡️ Protect app from removal</small>',
+        'disableAds': '<br><small>🚫 Block advertisement content</small>',
+        'enableDebugMode': '<br><small>🐛 Enable development debugging</small>',
+        'buildPropsEnablePlaceholders': '<br><small>🔄 Use placeholders like [RANDOM] in fields above.</small>',
+        'dnsOverHttpsUrl': '<br><small>🌐 URL of the DNS-over-HTTPS provider (e.g., https://dns.google/dns-query).</small>'
+    };
+    return descriptions[key] || '';
+}
+
+function formatOptionText(option) {
+    if (typeof option === 'boolean') return option ? '✅ Yes' : '❌ No';
+    if (typeof option === 'string' && option.length > 30) {
+        return option.substring(0, 27) + '...';
+    }
+    return String(option);
 }
 
 function formatLabel(key) {
-    if (!key) return '';
-    let result = key.replace(/([A-Z])/g, ' $1');
-    result = result.charAt(0).toUpperCase() + result.slice(1);
-    result = result.replace(/Sdk( |$)/g, 'SDK ').replace(/Id( |$)/g, 'ID ').replace(/Mac( |$)/g, 'MAC ').replace(/Imei( |$)/g, 'IMEI ').replace(/Imsi( |$)/g, 'IMSI ');
-    return result.trim();
+    return key.replace(/([A-Z])/g, ' $1')
+              .replace(/^./, str => str.toUpperCase())
+              .trim();
 }
 
-function initializeEventListeners() {
-    const container = document.getElementById('config-container');
-    if (!container) return;
+function generateRandomValue(key) {
+    const generateMacAddress = () => Array.from({length: 6}, () =>
+        Math.floor(Math.random() * 256).toString(16).padStart(2, '0')
+    ).join(':').toUpperCase();
 
-    container.addEventListener('click', function(event) {
-        const categoryHeader = event.target.closest('.category-header');
-        if (categoryHeader) {
-            const content = categoryHeader.nextElementSibling;
-            const chevron = categoryHeader.querySelector('.chevron');
-            if (content && chevron) {
-                content.classList.toggle('active');
-                chevron.classList.toggle('active');
-            }
-            return;
-        }
+    const generateUuid = () => {
+        // Generates a valid v4 UUID
+        return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+            var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
+            return v.toString(16);
+        });
+    };
 
-        const saeHeader = event.target.closest('.string-array-editor-header');
-        if (saeHeader) {
-            const contentId = saeHeader.dataset.targetContent;
-            const arrowId = saeHeader.dataset.targetArrow;
-            const contentElement = document.getElementById(contentId);
-            const arrowElement = document.getElementById(arrowId);
-            if (contentElement && arrowElement) {
-                contentElement.classList.toggle('active');
-                arrowElement.classList.toggle('expanded');
-            }
-            return;
-        }
+    const generateHex = (len) => Array.from({length: len}, () =>
+        Math.floor(Math.random() * 16).toString(16)).join('');
 
-        if (event.target.classList.contains('sae-apply-btn')) {
-            const btn = event.target;
-            const textareaId = btn.dataset.textareaId;
-            const category = btn.dataset.category;
-            const key = btn.dataset.key;
-            const countId = btn.dataset.countId;
-            const contentId = btn.dataset.contentId;
-            const arrowId = btn.dataset.arrowId;
+    const generateDigits = (len) => Array.from({length: len}, () =>
+        Math.floor(Math.random() * 10)).join('');
 
-            const textarea = document.getElementById(textareaId);
-            const countElement = document.getElementById(countId);
-            const contentElement = document.getElementById(contentId);
-            const arrowElement = document.getElementById(arrowId);
-
-            if (textarea && jsonConfig[category] && Object.hasOwnProperty.call(jsonConfig[category], key)) {
-                const lines = textarea.value.split('\n').map(line => line.trim()).filter(line => line !== '');
-                jsonConfig[category][key] = lines;
-                if (countElement) countElement.textContent = `Options: ${lines.length}`;
-                if (contentElement) contentElement.classList.remove('active');
-                if (arrowElement) arrowElement.classList.remove('expanded');
-            }
-            return;
-        }
-
-        if (event.target.classList.contains('sae-cancel-btn')) {
-            const btn = event.target;
-            const textareaId = btn.dataset.textareaId;
-            const category = btn.dataset.category;
-            const key = btn.dataset.key;
-            const countId = btn.dataset.countId;
-            const contentId = btn.dataset.contentId;
-            const arrowId = btn.dataset.arrowId;
-
-            const textarea = document.getElementById(textareaId);
-            const countElement = document.getElementById(countId);
-            const contentElement = document.getElementById(contentId);
-            const arrowElement = document.getElementById(arrowId);
-
-            if (textarea) textarea.value = '';
-            if (jsonConfig[category] && Object.hasOwnProperty.call(jsonConfig[category], key)) {
-                if (countElement) countElement.textContent = `Options: ${jsonConfig[category][key].length}`;
-            }
-            if (contentElement) contentElement.classList.remove('active');
-            if (arrowElement) arrowElement.classList.remove('expanded');
-            return;
-        }
-
-
-        if (event.target.classList.contains('generate-btn')) {
-            event.preventDefault();
-            const button = event.target;
-            const targetInputId = button.dataset.targetInput;
-            const settingKey = button.dataset.settingKey;
-            const targetInput = document.getElementById(targetInputId);
-            if (targetInput && settingKey) {
-                targetInput.value = generateRandomValue(settingKey) || '';
-                targetInput.dispatchEvent(new Event('input', { bubbles: true }));
-                targetInput.dispatchEvent(new Event('change', { bubbles: true }));
-            }
-            return;
-        }
-    });
-
-    container.addEventListener('change', function(event) {
-        if (event.target.type === 'checkbox') {
-            const checkbox = event.target;
-            const statusElement = checkbox.closest('.setting-checkbox').querySelector('.toggle-status');
-            if (statusElement) statusElement.textContent = checkbox.checked ? 'Enabled' : 'Disabled';
-
-            const controlledInputId = checkbox.dataset.controlsInputId;
-            const childContainerControlledByToggle = document.querySelector(`.child-settings-container[data-controlled-by-toggle-id="${checkbox.id}"]`);
-
-            if (childContainerControlledByToggle && controlledInputId) { // For appPassword structure
-                childContainerControlledByToggle.classList.toggle('active', checkbox.checked);
-                const passwordInput = document.getElementById(controlledInputId);
-                if (passwordInput) {
-                    if (!checkbox.checked) {
-                        passwordInput.value = "";
-                        passwordInput.dispatchEvent(new Event('input', { bubbles: true }));
-                        passwordInput.dispatchEvent(new Event('change', { bubbles: true }));
-                    }
-                }
-            } else { // Generic logic for parentKey-based child containers (e.g., fakeCalculator, patternLockApp)
-                const parentKey = checkbox.dataset.key;
-                const settingDiv = checkbox.closest('.setting');
-                if (settingDiv && parentKey) {
-                    const childSettingsContainer = settingDiv.querySelector(`.child-settings-container[data-parent-key="${parentKey}"]`);
-                    if (childSettingsContainer) {
-                        childSettingsContainer.classList.toggle('active', checkbox.checked);
-                    }
-                }
-            }
-        }
-        if (event.target.tagName === 'SELECT') {
-            const select = event.target;
-            const customContainer = select.parentElement.querySelector('.custom-input-container');
-            if (customContainer) {
-                const customInput = customContainer.querySelector('.custom-input');
-                if (select.value === 'custom') customContainer.style.display = 'flex';
-                else {
-                    customContainer.style.display = 'none';
-                    if (customInput) customInput.value = '';
-                }
-            }
-        }
-    });
-
-     container.addEventListener('input', function(event) {
-         if (event.target.type === 'range') {
-            const slider = event.target;
-            const sliderContainer = slider.closest('.slider-container');
-            if (sliderContainer) {
-                 const valueDisplay = sliderContainer.querySelector('.slider-value');
-                 if (valueDisplay) {
-                     let unit = '';
-                     if (slider.closest('.setting')) {
-                         const label = slider.closest('.setting').querySelector('.setting-label')?.textContent || '';
-                         if (label.includes('Temp')) unit = '°C';
-                         else if (label.includes('Voltage')) unit = 'mV';
-                         else if (label.includes('Level') || label.includes('Battery')) unit = '%';
-                     }
-                     valueDisplay.textContent = slider.value + unit;
-                 }
-            }
-            return;
-         }
-     });
-
-    container.querySelectorAll('input[type="checkbox"]').forEach(checkbox => checkbox.dispatchEvent(new Event('change', { bubbles: true })));
-    container.querySelectorAll('.array-field select').forEach(select => select.dispatchEvent(new Event('change', { bubbles: true })));
-    container.querySelectorAll('input[type="range"]').forEach(slider => slider.dispatchEvent(new Event('input', { bubbles: true })));
+    const generators = {
+        'changeAndroidId': () => generateHex(16),
+        'changeImei': () => generateDigits(15),
+        'changeImsi': () => generateDigits(15),
+        'changeAndroidSerial': () => 'AC' + Array.from({length: 12}, () => Math.floor(Math.random() * 36).toString(36).toUpperCase()).join(''),
+        'changeWifiMacAddress': generateMacAddress,
+        'changeBluetoothMacAddress': generateMacAddress,
+        'changeEthernetMacAddress': generateMacAddress,
+        'changeGoogleAdvertisingId': generateUuid,
+        'changeGoogleServiceFrameworkId': () => generateHex(16),
+        'changeFacebookAttributionId': generateUuid,
+        'changeAppSetId': generateUuid,
+        'changeOpenId': generateUuid,
+        'changeAmazonAdvertisingId': generateUuid,
+        'changeHuaweiAdvertisingId': generateUuid,
+    };
+    
+    const generator = generators[key];
+    return generator ? generator() : `custom_${Date.now()}`;
 }
 
-
+// --- Enhanced Save Function ---
 function getUpdatedConfig() {
-    const updatedConfigStructured = JSON.parse(JSON.stringify(jsonConfig));
-    const processedCustomFields = new Set();
-
-    for (const category in updatedConfigStructured) {
-        if (Object.hasOwnProperty.call(updatedConfigStructured, category)) {
-            const settings = updatedConfigStructured[category];
-            for (const key in settings) {
-                if (Object.hasOwnProperty.call(settings, key)) {
-                    const dataPath = `${category}.${key}`;
-
-                    if (NON_INTERACTIVE_DIRECTORY_KEYS.includes(key) || key === 'fakeWifiNetworks') {
-                        continue;
-                    }
-
-                    if (key === 'fakeCalculator' && typeof settings[key] === 'boolean') {
-                        const parentCheckbox = document.querySelector(`input[type="checkbox"][data-path="${dataPath}"][data-key="${key}"]`);
-                        if (parentCheckbox) {
-                            updatedConfigStructured[category][key] = parentCheckbox.checked;
-
-                            const codeKey = 'fakeCalculatorCode';
-                            const codeDataPath = `${category}.${codeKey}`;
-                            const codeElement = document.querySelector(`input[type="text"][data-path="${codeDataPath}"][data-key="${codeKey}"]`);
-                            if (codeElement) {
-                                updatedConfigStructured[category][codeKey] = codeElement.value;
-                            } else if (parentCheckbox.checked && !updatedConfigStructured[category].hasOwnProperty(codeKey)) {
-                                updatedConfigStructured[category][codeKey] = ""; // Default if parent active and key missing
-                            }
-                        }
-                        continue;
-                    } else if (key === 'patternLockApp' && typeof settings[key] === 'boolean') {
-                        const parentCheckbox = document.querySelector(`input[type="checkbox"][data-path="${dataPath}"][data-key="${key}"]`);
-                        if (parentCheckbox) {
-                            updatedConfigStructured[category][key] = parentCheckbox.checked;
-
-                            const sizeKey = 'appPatternSize';
-                            const sizeDataPath = `${category}.${sizeKey}`;
-                            const sizeElement = document.querySelector(`input[type="number"][data-path="${sizeDataPath}"][data-key="${sizeKey}"]`);
-                            if (sizeElement) {
-                                let sizeVal = parseInt(sizeElement.value, 10);
-                                updatedConfigStructured[category][sizeKey] = isNaN(sizeVal) ? 4 : sizeVal;
-                            } else if (parentCheckbox.checked) {
-                                updatedConfigStructured[category][sizeKey] = 4; // Default if active and element missing
-                            }
-
-                            const patternKey = 'appPattern';
-                            const patternDataPath = `${category}.${patternKey}`;
-                            const patternElement = document.querySelector(`input[type="text"][data-path="${patternDataPath}"][data-key="${patternKey}"]`);
-                            if (patternElement) {
-                                updatedConfigStructured[category][patternKey] = patternElement.value;
-                            } else if (parentCheckbox.checked) {
-                                updatedConfigStructured[category][patternKey] = ""; // Default if active and element missing
-                            }
-                        }
-                        continue;
-                    }
-
-                    // Handle appPassword specifically
-                    if (key === 'appPassword') {
-                        const passwordInput = document.querySelector(`input[type="text"][data-path="${dataPath}"][data-key="${key}"]`);
-                        if (passwordInput) {
-                            updatedConfigStructured[category][key] = passwordInput.value;
-                        }
-                        continue; // Skip the generic element lookup for appPassword
-                    }
-
-
-                    if (typeof settings[key] === 'object' && settings[key] !== null && !Array.isArray(settings[key])) {
-                        const currentObject = settings[key];
-                        const newObject = {};
-                        Object.keys(currentObject).forEach(objKey => {
-                            const objElementPath = `${dataPath}.${objKey}`;
-                            const objElement = document.querySelector(`[data-path="${objElementPath}"]`);
-                            if (objElement) {
-                                let value;
-                                if (objElement.type === 'checkbox') value = objElement.checked;
-                                else if (objElement.type === 'number' || objElement.type === 'range') value = parseFloat(objElement.value) || 0;
-                                else value = objElement.value; // Covers text, textarea, select, etc.
-                                newObject[objKey] = value;
-                            } else {
-                                newObject[objKey] = currentObject[objKey];
-                            }
-                        });
-                        updatedConfigStructured[category][key] = newObject;
-                        continue;
-                    }
-
-                    if (Array.isArray(settings[key]) && settings[key].length === 0 && document.querySelector(`[data-category="${category}"][data-key="${key}"].sae-apply-btn`)) {
-                        // String array editor values are updated directly into jsonConfig by their apply buttons.
-                        // So, updatedConfigStructured will already have the latest from jsonConfig.
-                        continue;
-                    }
-
-                    const element = document.querySelector(`[data-path="${dataPath}"][data-key="${key}"]`);
-
-                    if (!element) {
-                        const checkboxElement = document.querySelector(`input[type="checkbox"][data-path="${dataPath}"][data-key="${key}"]`);
-                        if (checkboxElement) {
-                            updatedConfigStructured[category][key] = checkboxElement.checked;
-                        }
-                        continue;
-                    }
-
-                    let value;
-                    if (element.type === 'checkbox') {
-                        value = element.checked;
-                    } else if (element.type === 'number' || element.type === 'range') {
-                        value = parseFloat(element.value) || 0;
-                    } else if (element.tagName === 'SELECT') {
-                        if (element.value === 'custom') {
-                            const customInput = document.querySelector(`input[data-path="${dataPath}"][data-key="${key}-custom"]`);
-                            if (customInput) {
-                                updatedConfigStructured[category][key] = "CUSTOM";
-                                let customPropertyName;
-                                if (key.startsWith('change')) {
-                                    let baseProperty = key.substring(6);
-                                    if (baseProperty.endsWith('ID')) baseProperty = baseProperty.substring(0, baseProperty.length - 2) + 'Id';
-                                    else if (baseProperty.endsWith('Mac')) baseProperty = baseProperty.substring(0, baseProperty.length - 3) + 'MAC';
-                                    baseProperty = baseProperty.charAt(0).toLowerCase() + baseProperty.slice(1);
-                                    customPropertyName = 'custom' + baseProperty.charAt(0).toUpperCase() + baseProperty.slice(1);
-
-                                    // Handle special case for plural user agents key to make it singular
-                                    if (key === 'changeSystemUserAgents') {
-                                        customPropertyName = 'customSystemUserAgent';
-                                    }
-                                } else {
-                                    customPropertyName = 'custom' + key.charAt(0).toUpperCase() + key.slice(1);
-                                }
-                                updatedConfigStructured[category][customPropertyName] = customInput.value;
-                                processedCustomFields.add(key);
-                                continue;
-                            } else {
-                                value = "CUSTOM";
-                            }
-                        } else {
-                            value = element.value;
-                            let customPropertyName;
-                            if (key.startsWith('change')) {
-                                let baseProperty = key.substring(6);
-                                if (baseProperty.endsWith('ID')) baseProperty = baseProperty.substring(0, baseProperty.length - 2) + 'Id';
-                                else if (baseProperty.endsWith('Mac')) baseProperty = baseProperty.substring(0, baseProperty.length - 3) + 'MAC';
-                                baseProperty = baseProperty.charAt(0).toLowerCase() + baseProperty.slice(1);
-                                customPropertyName = 'custom' + baseProperty.charAt(0).toUpperCase() + baseProperty.slice(1);
-
-                                // Handle special case for plural user agents key to make it singular
-                                if (key === 'changeSystemUserAgents') {
-                                    customPropertyName = 'customSystemUserAgent';
-                                }
-                            } else {
-                                customPropertyName = 'custom' + key.charAt(0).toUpperCase() + key.slice(1);
-                            }
-                            if (updatedConfigStructured[category] && Object.hasOwnProperty.call(updatedConfigStructured[category], customPropertyName)) {
-                                delete updatedConfigStructured[category][customPropertyName];
-                            }
-                        }
-                    } else { // Covers text input, textarea
-                        value = element.value;
-                    }
-
-                    if (!processedCustomFields.has(key)) {
-                        updatedConfigStructured[category][key] = value;
-                    }
-                }
-            }
-        }
-    }
-
     const flatConfig = {};
-    for (const category in updatedConfigStructured) {
-        if (Object.hasOwnProperty.call(updatedConfigStructured, category)) {
-            const settingsInCategory = updatedConfigStructured[category];
-            for (const keyInCat in settingsInCategory) {
-                if (Object.hasOwnProperty.call(settingsInCategory, keyInCat)) {
-                    flatConfig[keyInCat] = settingsInCategory[keyInCat];
+
+    for (const category in jsonConfig) {
+        const settings = jsonConfig[category];
+        for (const key in settings) {
+            if (!settings.hasOwnProperty(key)) continue;
+
+            // Skip child keys - they're handled by parents
+            if (allChildKeys.has(key)) continue;
+
+            const value = settings[key];
+            const isObjectParent = typeof value === 'object' && value !== null && !Array.isArray(value);
+            const isBooleanParent = allParentKeys.has(key) && typeof value === 'boolean';
+
+            // Handle object parents
+            if (isObjectParent) {
+                if (value.enabled) {
+                    flatConfig[key] = value;
                 }
+                continue;
             }
-        }
-    }
 
-    if (Object.hasOwnProperty.call(flatConfig, 'appPassword') && flatConfig.appPassword === "") {
-        delete flatConfig.appPassword;
-    }
+            // Handle boolean parents
+            if (isBooleanParent) {
+                if (value) {
+                    flatConfig[key] = true;
+                    // Add enabled children
+                    const children = parentChildMap.get(key) || [];
+                    children.forEach(childKey => {
+                        if (settings[childKey] !== undefined) {
+                            flatConfig[childKey] = settings[childKey];
+                        }
+                    });
+                }
+                continue;
+            }
 
-    if (Object.hasOwnProperty.call(flatConfig, 'fakeCalculator') && flatConfig.fakeCalculator === false) {
-        if (Object.hasOwnProperty.call(flatConfig, 'fakeCalculatorCode')) {
-            delete flatConfig.fakeCalculatorCode;
-        }
-    }
-
-    if (Object.hasOwnProperty.call(flatConfig, 'patternLockApp') && flatConfig.patternLockApp === false) {
-        if (Object.hasOwnProperty.call(flatConfig, 'appPatternSize')) {
-            delete flatConfig.appPatternSize;
-        }
-        if (Object.hasOwnProperty.call(flatConfig, 'appPattern')) {
-            delete flatConfig.appPattern;
+            // Handle simple settings
+            const originalValue = originalJsonConfig[category]?.[key];
+            if (keysWithCustomOption.includes(key) && Array.isArray(value) && 
+                Array.isArray(originalValue) && value.length === 1 && 
+                !originalValue.includes(value[0])) {
+                flatConfig[key] = "CUSTOM";
+                const customKeyName = 'custom' + key.charAt(6).toUpperCase() + key.slice(7);
+                flatConfig[customKeyName] = value[0];
+            } else if (Array.isArray(value)) {
+                flatConfig[key] = value[0];
+            } else {
+                flatConfig[key] = value;
+            }
         }
     }
 
     return flatConfig;
 }
 
-
 function saveConfig() {
     let packageName = currentPackageName;
     if (!packageName) {
-        packageName = prompt("Package name not detected. Please enter the package name to encrypt the configuration:");
-        if (!packageName || packageName.trim() === '') {
-            alert("Package name is required to encrypt and save the configuration.");
-            if(window.Android) window.Android.showToast("Save cancelled: Package name required.");
+        packageName = prompt("📦 Package name not detected. Please enter it:");
+        if (!packageName) {
+            alert("❌ Save cancelled: Package name required.");
             return;
         }
         updatePackageName(packageName);
     }
-
-    const finalFlatConfig = getUpdatedConfig();
-    const jsonString = JSON.stringify(finalFlatConfig, null, 2);
-
-    if (window.Android) {
-        try {
-            window.Android.saveEncryptedConfig(jsonString, packageName, configFileSplitCount);
-            window.Android.showToast("Configuration saved successfully!");
-        } catch (e) {
-            console.error("Error calling Android.saveEncryptedConfig:", e);
-            const errorMessage = `Error saving config: ${e.message}`;
-            window.Android.showToast(errorMessage);
-            alert(`Error saving config via Android interface: ${e.message}\n\nPlease check Android Studio Logcat for details.`);
-        }
-    } else {
-        console.warn("Running in browser mode. Configuration will be downloaded as plain text JSON.");
-        const blob = new Blob([jsonString], { type: 'application/json;charset=utf-8' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `${packageName}_cloneSettings.json`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-        alert("Running in browser mode. Configuration downloaded as JSON file (not encrypted).");
+    
+    try {
+        const finalFlatConfig = getUpdatedConfig();
+        const jsonString = JSON.stringify(finalFlatConfig);
+        
+        // Save button loading state
+        const saveBtn = document.querySelector('.save-btn');
+        const originalText = saveBtn.innerHTML;
+        saveBtn.innerHTML = '⏳ Saving...';
+        saveBtn.disabled = true;
+        
+        setTimeout(() => {
+            if (window.Android && typeof window.Android.saveEncryptedConfig === 'function') {
+                window.Android.saveEncryptedConfig(jsonString, packageName, configFileSplitCount);
+                if (window.Android.showToast) {
+                    window.Android.showToast("✅ Configuration saved successfully!");
+                }
+            } else {
+                console.warn("🌐 Browser mode: Downloading config as JSON file.");
+                const blob = new Blob([JSON.stringify(finalFlatConfig, null, 2)], { 
+                    type: 'application/json;charset=utf-8' 
+                });
+                const a = document.createElement('a');
+                a.href = URL.createObjectURL(blob);
+                a.download = `${packageName}_cloneSettings.json`;
+                a.click();
+                URL.revokeObjectURL(a.href);
+                alert("📥 Configuration downloaded as JSON file!");
+            }
+            
+            // Reset button
+            saveBtn.innerHTML = originalText;
+            saveBtn.disabled = false;
+        }, 500);
+        
+    } catch (error) {
+        alert(`❌ Save Error: ${error.message}`);
+        console.error("Save Error:", error);
     }
 }
-
 </script>
 </body>
 </html>
