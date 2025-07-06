@@ -653,7 +653,10 @@ document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && editorOv
 function createEditorControls(key, category) {
     const container = document.createElement('div');
     
-    if (allParentKeys.has(key)) {
+    if (compoundSettingsMap.has(key)) {
+        container.appendChild(buildCompoundSettingEditor(key, category));
+    }
+    else if (allParentKeys.has(key)) {
         container.appendChild(buildParentEditor(key, category));
     }
     else if (CUSTOM_EDITORS.includes(key)) {
@@ -762,10 +765,37 @@ function buildParentEditor(key, category) {
 function buildCompoundSettingEditor(key, category) {
     const container = document.createElement('div');
     const children = compoundSettingsMap.get(key) || [];
-    container.appendChild(buildSimpleControl(key, jsonConfig[category][key], `${category}.${key}`, category));
+
+    // Build the parent control which contains the dropdown
+    const parentControl = buildSimpleControl(key, jsonConfig[category][key], `${category}.${key}`, category);
+    container.appendChild(parentControl);
+
+    // Find the dropdown element within the parent control
+    const select = parentControl.querySelector('select');
+    
+    // Create the container for the child settings
     const childContainer = document.createElement('div');
     childContainer.className = 'editor-child-settings';
-    children.forEach(childKey => childContainer.appendChild(buildSimpleControl(childKey, jsonConfig[category][childKey], `${category}.${childKey}`, category)));
+    
+    // Populate the child container with its controls
+    children.forEach(childKey => {
+        if (jsonConfig[category].hasOwnProperty(childKey)) {
+             childContainer.appendChild(buildSimpleControl(childKey, jsonConfig[category][childKey], `${category}.${childKey}`, category));
+        }
+    });
+    
+    // Add logic to show/hide the child container based on the dropdown's value
+    if (select) {
+        const updateVisibility = () => {
+            // Check if the selected value is 'CUSTOM' (case-insensitive)
+            const isCustom = (select.value || '').toUpperCase() === 'CUSTOM';
+            childContainer.style.display = isCustom ? 'block' : 'none';
+        };
+        select.addEventListener('change', updateVisibility);
+        // Set the initial visibility when the editor is first opened
+        updateVisibility(); 
+    }
+
     container.appendChild(childContainer);
     return container;
 }
@@ -776,7 +806,7 @@ function buildSimpleControl(key, value, dataPath, category, isParentToggle = fal
     const labelText = formatLabel(key);
     const uniqueId = `control-id-${dataPath ? dataPath.replace(/\./g, '-') : key.replace(/ /g, '-')}`;
     
-    const isBooleanControl = typeof value === 'boolean' || key.endsWith('EnablePlaceholders');
+    const isBooleanControl = typeof value === 'boolean' || key.endsWith('EnablePlaceholders') || key === 'removeAllCookies';
     
     if (isBooleanControl) {
         const useSimpleCheckbox = key.startsWith('webViewDisable') || key === 'nameRegExp' || key.startsWith('webViewUrlDataMonitor') || key.startsWith('showWebView') || key === 'removeAllCookies' || ANDROID_SDK_VERSIONS.some(v => v.name === key);
@@ -1476,7 +1506,9 @@ function buildWebViewCookieEditor(key, category) {
     const container = document.createElement('div');
     const isEnabled = Array.isArray(jsonConfig[category][key]);
     
-    const mainToggle = buildSimpleControl("Enabled", isEnabled, `${category}.${key}_enabled`, category, true);
+    // FIX 1: Pass "Enabled" as the key and set isParentToggle to false.
+    // This prevents the label from becoming "Enable Enabled".
+    const mainToggle = buildSimpleControl("Enabled", isEnabled, `${category}.${key}_enabled`, category, false);
     container.appendChild(mainToggle);
 
     const childContainer = document.createElement('div');
@@ -1538,7 +1570,9 @@ function buildWebViewCookieEditor(key, category) {
         };
 
         childContainer.append(header, formWrapper);
-        const removeAllContainer = buildSimpleControl('Remove all cookies', jsonConfig[category]['removeAllCookies'], `${category}.removeAllCookies`, category);
+        
+        // FIX 2: Pass the actual config key 'removeAllCookies' so it's treated as a boolean checkbox.
+        const removeAllContainer = buildSimpleControl('removeAllCookies', jsonConfig[category]['removeAllCookies'], `${category}.removeAllCookies`, category);
         childContainer.appendChild(removeAllContainer);
         renderCurrentCookie();
     }
