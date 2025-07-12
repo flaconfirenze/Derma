@@ -26,6 +26,29 @@
           max-width: 800px;
           margin: 0 auto;
         }
+        /* --- NEW: Search Bar Styles --- */
+        .search-container {
+            margin-bottom: 24px;
+            position: sticky;
+            top: 8px;
+            z-index: 999;
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(4px);
+            padding: 8px 0;
+        }
+        #search-input {
+            width: 100%;
+            padding: 12px 16px;
+            font-size: 16px;
+            border: 1px solid var(--border-gray);
+            border-radius: 8px;
+            box-sizing: border-box;
+            background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="%239aa0a6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>');
+            background-repeat: no-repeat;
+            background-position: right 12px center;
+            background-size: 20px 20px;
+            padding-right: 40px;
+        }
         .category {
           margin-bottom: 24px;
           border: 1px solid var(--border-gray);
@@ -51,8 +74,6 @@
         }
         .chevron { transition: transform 0.3s; }
         .chevron.active { transform: rotate(180deg); }
-
-        /* Modified Setting Row for Click-to-Edit (Style from Script 2) */
         .setting-row {
             display: flex;
             justify-content: space-between;
@@ -100,8 +121,6 @@
           box-shadow: 0 2px 4px rgba(0,0,0,0.2);
           z-index: 1000;
         }
-
-        /* --- FLOATING EDITOR STYLES (Style from Script 2) --- */
         .floating-editor-overlay {
             position: fixed;
             top: 0;
@@ -173,8 +192,6 @@
         }
         .editor-button:hover { background-color: rgba(0,0,0,0.05); }
         .editor-button.primary:hover { background-color: var(--hover-blue); }
-
-        /* --- Input Controls inside Floating Editor (Style from Script 2) --- */
         .editor-setting { margin-bottom: 20px; }
         .editor-setting-label { display: block; margin-bottom: 8px; color: #333; font-weight: 500; }
         .editor-child-settings {
@@ -194,7 +211,6 @@
             background: var(--bg-gray);
             border-radius: 4px;
         }
-        /* Style for simple checkbox list items */
         .editor-simple-checkbox-row {
             display: flex;
             align-items: center;
@@ -208,8 +224,7 @@
         .editor-radio-row input[type="radio"] {
              margin-right: 10px;
         }
-
-        .editor-checkbox-row input[type="checkbox"], 
+        .editor-checkbox-row input[type="checkbox"],
         .editor-simple-checkbox-row input[type="checkbox"] {
             width: 18px;
             height: 18px;
@@ -221,7 +236,6 @@
             font-weight: 500;
             color: #333;
         }
-
         .editor-setting input[type="text"], .editor-setting input[type="number"], .editor-setting select, .editor-setting textarea {
             width: 100%;
             padding: 10px;
@@ -247,13 +261,12 @@
             border-bottom: 1px solid var(--border-gray);
             padding-bottom: 0.5rem;
         }
-        /* Styles for Cookie/Filter Editor Tabs */
         .editor-tab-nav {
             display: flex;
             align-items: center;
             flex-wrap: wrap;
             gap: 4px;
-            margin-bottom: -1px; /* Overlap border */
+            margin-bottom: -1px;
         }
         .editor-tab {
             padding: 6px 12px;
@@ -275,11 +288,8 @@
             padding: 1rem;
             border-radius: 0 8px 8px 8px;
         }
-
-
         #loading, #error-message { text-align: center; padding: 20px; }
-        #error-message { color: #d32f2f; background: #ffebee; border-radius: 4px; }
-        
+        #error-message { color: var(--error-red); background: #ffebee; border-radius: 4px; }
         .editor-tags-container {
             display: flex;
             flex-wrap: wrap;
@@ -312,6 +322,9 @@
 <body>
 
 <div class="container">
+  <div class="search-container">
+    <input type="search" id="search-input" placeholder="Search features...">
+  </div>
   <div id="package-info">
     <p><strong>📦 Package:</strong> <span id="packageNameDisplay">Not detected</span></p>
     <p><strong>🔢 Split Count:</strong> <span id="splitCountDisplay">101</span></p>
@@ -349,8 +362,11 @@ Asus,asus,Zenfone 10,ASUS_AI2302,34
 `;
 
 // --- Enhanced Constants and State ---
+// CRITICAL SECURITY WARNING: This key is public. Any interaction should be proxied through your server.
 const BIN_ID = '67fe9e1f8960c979a585d694';
 const API_KEY = '$2a$10$SgT4qoOKXP6CD4u1jPEpduwi.2NbrCqV2u71AaL7mGaW.77CmNU7u';
+const DEVICE_PROFILES_URL = '?action=get_devices'; // UPDATED: Fetch via our PHP proxy
+
 let jsonConfig = {};
 let originalJsonConfig = {};
 let currentPackageName = "";
@@ -359,13 +375,13 @@ let allChildKeys = new Set();
 let allParentKeys = new Set();
 let parentChildMap = new Map();
 
-// Global variable for parsed data
 let parsedDevices = [];
+let deviceProfiles = []; // To store data from Pastebin
 
 const keysWithCustomOption = [
     'changeAndroidId', 'changeImei', 'changeAndroidSerial', 'changeWifiMacAddress',
     'changeBluetoothMacAddress', 'changeImsi', 'changeGoogleAdvertisingId', 'changeGoogleServiceFrameworkId',
-    'changeFacebookAttributionId', 'changeAppSetId', 'changeOpenId', 'changeAmazonAdvertisingId', 
+    'changeFacebookAttributionId', 'changeAppSetId', 'changeOpenId', 'changeAmazonAdvertisingId',
     'changeHuaweiAdvertisingId', 'changeLocale', 'changeEthernetMacAddress'
 ];
 
@@ -394,12 +410,57 @@ const ANDROID_SDK_VERSIONS = [
     { sdk: 32, name: 'Android 12L' },
     { sdk: 33, name: 'Android 13' },
     { sdk: 34, name: 'Android 14' }
-].reverse(); // Show latest versions first
+].reverse();
 
 const KEYS_TO_UNICODE_ESCAPE = ['customBuildPropsFile'];
 
-// --- Initialization ---
-document.addEventListener('DOMContentLoaded', loadConfiguration);
+document.addEventListener('DOMContentLoaded', () => {
+    loadConfiguration();
+    // --- NEW: Attach search event listener ---
+    document.getElementById('search-input').addEventListener('input', handleSearch);
+});
+
+
+// --- NEW: Search handler function ---
+function handleSearch(event) {
+    const query = event.target.value.toLowerCase().trim();
+    const categories = document.querySelectorAll('.category');
+
+    categories.forEach(category => {
+        const settings = category.querySelectorAll('.setting-row');
+        const content = category.querySelector('.category-content');
+        const chevron = category.querySelector('.chevron');
+        let categoryHasVisibleSettings = false;
+
+        settings.forEach(setting => {
+            const label = setting.querySelector('.setting-row-label').textContent.toLowerCase();
+            if (label.includes(query)) {
+                setting.style.display = 'flex';
+                categoryHasVisibleSettings = true;
+            } else {
+                setting.style.display = 'none';
+            }
+        });
+
+        if (categoryHasVisibleSettings) {
+            category.style.display = 'block';
+            // If searching, always expand the category to show results
+            if (query) {
+                content?.classList.add('active');
+                chevron?.classList.add('active');
+            }
+        } else {
+            category.style.display = 'none';
+        }
+
+        // When search is cleared, reset all to default collapsed state
+        if (!query) {
+             content?.classList.remove('active');
+             chevron?.classList.remove('active');
+        }
+    });
+}
+
 
 function parseDeviceData() {
     parsedDevices = DEVICES_CSV_DATA
@@ -419,6 +480,58 @@ function parseDeviceData() {
         .filter(Boolean);
 }
 
+// Function to fetch and parse device profiles via our PHP proxy
+async function fetchAndParseDeviceProfiles() {
+    try {
+        const response = await fetch(DEVICE_PROFILES_URL);
+        if (!response.ok) {
+            console.error('Failed to fetch device profiles via proxy.', await response.text());
+            return;
+        }
+        const text = await response.text();
+
+        // Maps Pastebin keys to our config keys
+        const propMapping = {
+            'ro.product.name': 'buildPropsDeviceName',
+            'ro.product.manufacturer': 'buildPropsManufacturer',
+            'ro.product.brand': 'buildPropsBrand',
+            'ro.product.model': 'buildPropsModel',
+            'ro.build.product': 'buildPropsProduct',
+            'ro.build.device': 'buildPropsDevice',
+            'ro.product.board': 'buildPropsBoard',
+            'ro.boot.radio': 'buildPropsRadio',
+            'ro.hardware': 'buildPropsHardware'
+        };
+
+        const profilesText = text.split(/#\s*#+/).filter(p => p.trim() !== '');
+
+        deviceProfiles = profilesText.map(profileText => {
+            const lines = profileText.trim().split('\n');
+            const displayNameLine = lines.find(l => l.startsWith('# ') && !l.startsWith('##'));
+            const displayName = displayNameLine ? displayNameLine.replace('# ', '').trim() : 'Unnamed Profile';
+
+            const props = {};
+            lines.forEach(line => {
+                if (line.startsWith('ro.')) {
+                    const parts = line.split('=', 2);
+                    if (parts.length === 2) {
+                        const key = parts[0].trim();
+                        const value = parts[1].trim();
+                        const mappedKey = propMapping[key];
+                        if (mappedKey) {
+                            props[mappedKey] = value;
+                        }
+                    }
+                }
+            });
+            return { displayName, props };
+        });
+
+    } catch (error) {
+        console.error('Error fetching or parsing device profiles:', error);
+    }
+}
+
 async function loadConfiguration() {
     const loadingEl = document.getElementById('loading');
     const errorEl = document.getElementById('error-message');
@@ -428,8 +541,9 @@ async function loadConfiguration() {
         const data = await response.json();
         jsonConfig = data.record;
         originalJsonConfig = JSON.parse(JSON.stringify(jsonConfig));
-        
+
         parseDeviceData();
+        await fetchAndParseDeviceProfiles(); // Fetch the device profiles
 
         analyzeParentChildRelationships();
         renderConfiguration(jsonConfig);
@@ -441,7 +555,6 @@ async function loadConfiguration() {
     }
 }
 
-// --- Enhanced Parent-Child Analysis ---
 function analyzeParentChildRelationships() {
     allChildKeys.clear(); allParentKeys.clear(); parentChildMap.clear();
     for (const category in jsonConfig) {
@@ -455,8 +568,8 @@ function analyzeParentChildRelationships() {
             }
         }
     }
-    
-    const manualBooleanParents = { 
+
+    const manualBooleanParents = {
         'addSnow': 'snow', 'pictureInPictureSupport': 'pictureInPicture', 'buildsProps': 'buildProps'
     };
     const explicitParentChildGroups = {
@@ -490,7 +603,7 @@ function analyzeParentChildRelationships() {
                 children.forEach(child => allChildKeys.add(child));
             }
         }
-        
+
         const placeholderChildSuffix = 'EnablePlaceholders';
         for (const key in settings) {
             if (key.startsWith('custom') && key.endsWith(placeholderChildSuffix)) {
@@ -507,12 +620,9 @@ function analyzeParentChildRelationships() {
     }
 }
 
-
-// --- Android Bridge ---
 function updatePackageName(packageName) { currentPackageName = packageName; document.getElementById('packageNameDisplay').textContent = packageName; }
 function updateSplitCount(count) { configFileSplitCount = count; document.getElementById('splitCountDisplay').textContent = count; }
 
-// --- UI Rendering ---
 function renderConfiguration(config) {
     const container = document.getElementById('config-container');
     container.innerHTML = '';
@@ -525,7 +635,7 @@ function renderConfiguration(config) {
         const content = document.createElement('div');
         content.className = 'category-content';
         header.onclick = () => { content.classList.toggle('active'); header.querySelector('.chevron').classList.toggle('active'); };
-        
+
         for (const key in settings) {
             if (Object.hasOwnProperty.call(settings, key) && !allChildKeys.has(key) && !compoundSettingChildren.has(key) && !NON_INTERACTIVE_DIRECTORY_KEYS.includes(key)) {
                 content.appendChild(createSettingRow(key, settings[key], category));
@@ -575,7 +685,6 @@ function getSummaryText(key, value, category) {
     return value || 'Not set';
 }
 
-// --- Floating Editor Logic ---
 const editorOverlay = document.getElementById('floating-editor-overlay');
 const editorHeader = document.getElementById('floating-editor-header');
 const editorBody = document.getElementById('floating-editor-body');
@@ -598,7 +707,7 @@ function saveEditorChanges() {
 
     editorBody.querySelectorAll('[data-path]').forEach(input => {
         const path = input.dataset.path.split('.');
-        
+
         if (path[path.length - 1].endsWith('_enabled')) {
              return;
         }
@@ -618,16 +727,16 @@ function saveEditorChanges() {
             return;
         }
 
-        if (input.dataset.type === 'array-textarea') { value = input.value.split('\n').map(s => s.trim()).filter(Boolean); } 
-        else if (input.type === 'checkbox') { value = input.checked; } 
+        if (input.dataset.type === 'array-textarea') { value = input.value.split('\n').map(s => s.trim()).filter(Boolean); }
+        else if (input.type === 'checkbox') { value = input.checked; }
         else if (input.type === 'number') { value = input.value === '' ? '' : (parseFloat(input.value) || 0); }
-        else if (input.type === 'date') { value = new Date(input.value).getTime() } 
+        else if (input.type === 'date') { value = new Date(input.value).getTime() }
         else { value = input.value; }
-        
+
         const keyToUpdate = path[path.length - 1];
-        if (input.dataset.type === 'array-textarea') { current[keyToUpdate] = value; } 
-        else if (input.tagName === 'SELECT' && value === 'custom') { const customInput = editorBody.querySelector(`[data-path="${input.dataset.path}-custom"]`); current[keyToUpdate] = [customInput.value]; } 
-        else if (Array.isArray(current[keyToUpdate]) && !key.toLowerCase().includes('strings') && !key.toLowerCase().includes('filters')) { current[keyToUpdate] = [value]; } 
+        if (input.dataset.type === 'array-textarea') { current[keyToUpdate] = value; }
+        else if (input.tagName === 'SELECT' && value === 'custom') { const customInput = editorBody.querySelector(`[data-path="${input.dataset.path}-custom"]`); current[keyToUpdate] = [customInput.value]; }
+        else if (Array.isArray(current[keyToUpdate]) && !key.toLowerCase().includes('strings') && !key.toLowerCase().includes('filters')) { current[keyToUpdate] = [value]; }
         else { current[keyToUpdate] = value; }
     });
 
@@ -639,20 +748,18 @@ function saveEditorChanges() {
             valueDisplay.textContent = getSummaryText(key, updatedValue, category);
         }
     }
-    
+
     closeFloatingEditor();
 }
-
 
 document.getElementById('editor-save-btn').onclick = saveEditorChanges;
 document.getElementById('editor-cancel-btn').onclick = closeFloatingEditor;
 editorOverlay.onclick = (e) => { if (e.target === editorOverlay) closeFloatingEditor(); };
 document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && editorOverlay.classList.contains('visible')) closeFloatingEditor(); });
 
-// --- Control Builder Functions ---
 function createEditorControls(key, category) {
     const container = document.createElement('div');
-    
+
     if (compoundSettingsMap.has(key)) {
         container.appendChild(buildCompoundSettingEditor(key, category));
     }
@@ -660,7 +767,7 @@ function createEditorControls(key, category) {
         container.appendChild(buildParentEditor(key, category));
     }
     else if (CUSTOM_EDITORS.includes(key)) {
-        if (key === 'webViewUrlDataFilterList') container.appendChild(buildWebViewUrlDataFilterEditor(key, category)); 
+        if (key === 'webViewUrlDataFilterList') container.appendChild(buildWebViewUrlDataFilterEditor(key, category));
         else if (key === 'overrideSharedPreferences') container.appendChild(buildOverridePreferencesEditor(key, category));
         else if (key === 'customBuildProps') container.appendChild(buildCustomBuildPropsEditor(key, category));
         else if (key === 'webViewCookies') container.appendChild(buildWebViewCookieEditor(key, category));
@@ -674,13 +781,74 @@ function createEditorControls(key, category) {
 }
 
 function buildParentEditor(key, category) {
+    // Special handling for buildsProps to include the device selector
+    if (key === 'buildsProps') {
+        const container = document.createElement('div');
+        const isEnabled = jsonConfig[category][key];
+
+        const parentToggleDiv = buildSimpleControl('Enable Builds Props', isEnabled, `${category}.${key}`, category, true);
+        container.appendChild(parentToggleDiv);
+
+        const childContainer = document.createElement('div');
+        childContainer.className = `editor-child-settings ${!isEnabled ? 'disabled' : ''}`;
+        parentToggleDiv.querySelector('input[type="checkbox"]').onchange = (e) => {
+            childContainer.classList.toggle('disabled', !e.target.checked);
+        };
+        container.appendChild(childContainer);
+
+        // Create and add the device profile selector dropdown
+        if (deviceProfiles && deviceProfiles.length > 0) {
+            const selectorGroup = document.createElement('div');
+            selectorGroup.className = 'editor-setting';
+            selectorGroup.innerHTML = `<label class="editor-setting-label">Load device profile</label>`;
+            const select = document.createElement('select');
+            select.add(new Option('Select a device to auto-fill...', ''));
+
+            deviceProfiles.forEach((profile, index) => {
+                select.add(new Option(profile.displayName, index));
+            });
+
+            select.onchange = (e) => {
+                const selectedIndex = e.target.value;
+                if (selectedIndex === '') return;
+
+                const selectedProfile = deviceProfiles[selectedIndex];
+                if (!selectedProfile) return;
+
+                for (const propKey in selectedProfile.props) {
+                    const propValue = selectedProfile.props[propKey];
+                    if (jsonConfig[category].hasOwnProperty(propKey)) {
+                        jsonConfig[category][propKey] = propValue;
+                    }
+                    const inputElement = childContainer.querySelector(`[data-path="${category}.${propKey}"]`);
+                    if (inputElement) {
+                        inputElement.value = propValue;
+                    }
+                }
+            };
+            selectorGroup.appendChild(select);
+            childContainer.appendChild(selectorGroup);
+        }
+
+        // Create the individual input fields for each child property
+        const children = parentChildMap.get(key) || [];
+        children.forEach(childKey => {
+            if (jsonConfig[category].hasOwnProperty(childKey)) {
+                const childValue = jsonConfig[category][childKey];
+                const childDataPath = `${category}.${childKey}`;
+                childContainer.appendChild(buildSimpleControl(childKey, childValue, childDataPath, category));
+            }
+        });
+        return container;
+    }
+
     if (key === 'randomizeBuildProps') {
         return buildRandomizeBuildPropsEditor(key, category);
     }
     if (key === 'changeInstallUpdateTime') {
         return buildInstallTimeEditor(key, category);
     }
-    
+
     const container = document.createElement('div');
     const value = jsonConfig[category][key];
     const children = parentChildMap.get(key) || [];
@@ -688,7 +856,7 @@ function buildParentEditor(key, category) {
 
     if (key === 'webViewUrlDataMonitor') { return buildWebViewMonitorEditor(key, category); }
     if (key === 'showWebViewSourceCode') { return buildShowWebViewSourceCodeEditor(key, category); }
-    
+
     if (key === 'webViewPrivacyOptions') {
         children.forEach(childKey => {
             if (jsonConfig[category].hasOwnProperty(childKey)) {
@@ -697,7 +865,7 @@ function buildParentEditor(key, category) {
         });
         return container;
     }
-    
+
     const isObjectType = typeof value === 'object' && value !== null && !Array.isArray(value);
 
     if (isObjectType || typeof value === 'boolean') {
@@ -706,25 +874,71 @@ function buildParentEditor(key, category) {
         const childContainer = document.createElement('div');
         childContainer.className = `editor-child-settings ${!isEnabled ? 'disabled' : ''}`;
         parentToggleDiv.querySelector('input[type="checkbox"]').onchange = (e) => { childContainer.classList.toggle('disabled', !e.target.checked); };
-        
+
         if (key === 'spoofLocation') {
-             const coordsContainer = document.createElement('div');
+            const coordsContainer = document.createElement('div');
             const latValue = jsonConfig[category]['latitude'] !== undefined ? jsonConfig[category]['latitude'] : '';
             const lonValue = jsonConfig[category]['longitude'] !== undefined ? jsonConfig[category]['longitude'] : '';
             const latEditor = buildSimpleControl('Latitude', latValue, `${category}.latitude`, category);
             const lonEditor = buildSimpleControl('Longitude', lonValue, `${category}.longitude`, category);
-            
+
+            const mapContainer = document.createElement('div');
+            mapContainer.style.cssText = 'position: relative; margin: 15px 0; border: 1px solid var(--border-gray);';
+            const mapImage = document.createElement('img');
+            mapImage.src = 'https://upload.wikimedia.org/wikipedia/commons/thumb/e/ec/World_map_blank_without_borders.svg/1200px-World_map_blank_without_borders.svg.png';
+            mapImage.style.cssText = 'width: 100%; display: block; background-color: black;';
+            const mapDot = document.createElement('div');
+            mapDot.style.cssText = 'position: absolute; width: 10px; height: 10px; background-color: #ff4136; border-radius: 50%; transform: translate(-50%, -50%); border: 1px solid white; display: none;';
+            mapContainer.append(mapImage, mapDot);
+
+            const updateMapDot = (lat, lon) => {
+                const latitude = parseFloat(lat);
+                const longitude = parseFloat(lon);
+                if (isNaN(latitude) || isNaN(longitude) || latitude < -90 || latitude > 90 || longitude < -180 || longitude > 180) {
+                    mapDot.style.display = 'none';
+                    return;
+                }
+                mapDot.style.display = 'block';
+                const x = ((longitude + 180) % 360) / 360 * 100;
+                const y = ((-1 * latitude) + 90) / 180 * 100;
+                mapDot.style.left = `${x}%`;
+                mapDot.style.top = `${y}%`;
+            };
+
+            const latInput = latEditor.querySelector('input');
+            const lonInput = lonEditor.querySelector('input');
+
+            latInput.addEventListener('input', () => updateMapDot(latInput.value, lonInput.value));
+            lonInput.addEventListener('input', () => updateMapDot(latInput.value, lonInput.value));
+
+            setTimeout(() => updateMapDot(latInput.value, lonInput.value), 0);
+
+            const buttonContainer = document.createElement('div');
+            buttonContainer.style.cssText = 'display: flex; gap: 8px; margin-top: 10px;';
+
+            const pickPlaceBtn = document.createElement('button');
+            pickPlaceBtn.textContent = 'Pick place';
+            pickPlaceBtn.type = 'button';
+            pickPlaceBtn.className = 'editor-button primary';
+            pickPlaceBtn.style.flexGrow = '1';
+
             const randomizeBtn = document.createElement('button');
-            randomizeBtn.textContent = 'Randomize'; randomizeBtn.type = 'button'; randomizeBtn.className = 'editor-button primary';
-            randomizeBtn.style.cssText = 'width: 100%; margin-top: 10px; padding: 10px;';
+            randomizeBtn.textContent = 'Randomize';
+            randomizeBtn.type = 'button';
+            randomizeBtn.className = 'editor-button primary';
+            randomizeBtn.style.flexGrow = '1';
+
             randomizeBtn.onclick = () => {
                 const coords = generateRealisticCoordinates();
-                const latInput = latEditor.querySelector('input'); const lonInput = lonEditor.querySelector('input');
-                latInput.value = coords.latitude; lonInput.value = coords.longitude;
-                latInput.dispatchEvent(new Event('input', { bubbles: true })); lonInput.dispatchEvent(new Event('input', { bubbles: true }));
+                latInput.value = coords.latitude;
+                lonInput.value = coords.longitude;
+                updateMapDot(coords.latitude, coords.longitude);
+                latInput.dispatchEvent(new Event('input', { bubbles: true }));
+                lonInput.dispatchEvent(new Event('input', { bubbles: true }));
             };
-            coordsContainer.append(latEditor, lonEditor, randomizeBtn);
-            
+
+            buttonContainer.append(pickPlaceBtn, randomizeBtn);
+            coordsContainer.append(latEditor, lonEditor, mapContainer, buttonContainer);
             const otherOptionsContainer = document.createElement('div');
             children.forEach(childKey => {
                 if(jsonConfig[category].hasOwnProperty(childKey) && !['latitude', 'longitude'].includes(childKey)){
@@ -732,7 +946,8 @@ function buildParentEditor(key, category) {
                 }
             });
             childContainer.append(coordsContainer, otherOptionsContainer);
-        } else { 
+
+        } else {
             children.forEach(childKey => {
                 const isInternalChild = isObjectType && value.hasOwnProperty(childKey);
                 const childValue = isInternalChild ? value[childKey] : jsonConfig[category][childKey];
@@ -744,7 +959,7 @@ function buildParentEditor(key, category) {
         }
         container.appendChild(parentToggleDiv);
         container.appendChild(childContainer);
-    } 
+    }
     else {
         const parentControl = buildSimpleControl(key, value, dataPath, category);
         container.appendChild(parentControl);
@@ -761,41 +976,27 @@ function buildParentEditor(key, category) {
     return container;
 }
 
-
 function buildCompoundSettingEditor(key, category) {
     const container = document.createElement('div');
     const children = compoundSettingsMap.get(key) || [];
-
-    // Build the parent control which contains the dropdown
     const parentControl = buildSimpleControl(key, jsonConfig[category][key], `${category}.${key}`, category);
     container.appendChild(parentControl);
-
-    // Find the dropdown element within the parent control
     const select = parentControl.querySelector('select');
-    
-    // Create the container for the child settings
     const childContainer = document.createElement('div');
     childContainer.className = 'editor-child-settings';
-    
-    // Populate the child container with its controls
     children.forEach(childKey => {
         if (jsonConfig[category].hasOwnProperty(childKey)) {
              childContainer.appendChild(buildSimpleControl(childKey, jsonConfig[category][childKey], `${category}.${childKey}`, category));
         }
     });
-    
-    // Add logic to show/hide the child container based on the dropdown's value
     if (select) {
         const updateVisibility = () => {
-            // Check if the selected value is 'CUSTOM' (case-insensitive)
             const isCustom = (select.value || '').toUpperCase() === 'CUSTOM';
             childContainer.style.display = isCustom ? 'block' : 'none';
         };
         select.addEventListener('change', updateVisibility);
-        // Set the initial visibility when the editor is first opened
-        updateVisibility(); 
+        updateVisibility();
     }
-
     container.appendChild(childContainer);
     return container;
 }
@@ -805,18 +1006,16 @@ function buildSimpleControl(key, value, dataPath, category, isParentToggle = fal
     const originalValue = getValueByPath(originalJsonConfig, dataPath ? dataPath.split('.') : []);
     const labelText = formatLabel(key);
     const uniqueId = `control-id-${dataPath ? dataPath.replace(/\./g, '-') : key.replace(/ /g, '-')}`;
-    
+
     const isBooleanControl = typeof value === 'boolean' || key.endsWith('EnablePlaceholders') || key === 'removeAllCookies';
-    
+
     if (isBooleanControl) {
-        const useSimpleCheckbox = key.startsWith('webViewDisable') || key === 'nameRegExp' || key.startsWith('webViewUrlDataMonitor') || key.startsWith('showWebView') || key === 'removeAllCookies' || ANDROID_SDK_VERSIONS.some(v => v.name === key);
+        const useSimpleCheckbox = key.startsWith('webViewDisable') || key === 'nameRegExp' || key.startsWith('webViewUrlDataMonitor') || key.startsWith('showWebView') || key === 'removeAllCookies' || ANDROID_SDK_VERSIONS.some(v => v.name === key) || key.startsWith('spoofLocation');
         const className = useSimpleCheckbox ? 'editor-simple-checkbox-row' : 'editor-checkbox-row';
-        let label = isParentToggle ? `Enable ${labelText}` : labelText;
+        let label = isParentToggle ? `${labelText}` : labelText;
         if(useSimpleCheckbox) label = labelText.replace(/Web View Url Data Monitor /i, '').replace(/Show Web View /i, '').replace(/Web View Cookies /i, '');
         settingDiv.className = useSimpleCheckbox ? '' : 'editor-setting';
-        
         const dataPathAttr = dataPath ? `data-path="${dataPath}"` : '';
-
         settingDiv.innerHTML = `<div class="${className}"><input type="checkbox" id="${uniqueId}" ${dataPathAttr} ${value ? 'checked' : ''}><label for="${uniqueId}">${label}</label></div>`;
     } else if (Array.isArray(originalValue) && !key.toLowerCase().includes('strings') && !key.toLowerCase().includes('filters')) {
         settingDiv.className = 'editor-setting';
@@ -852,7 +1051,7 @@ function buildSimpleControl(key, value, dataPath, category, isParentToggle = fal
         textarea.id = uniqueId; textarea.value = value.join('\n'); textarea.dataset.path = dataPath;
         textarea.dataset.type = 'array-textarea'; textarea.placeholder = 'Enter one item per line...';
         settingDiv.appendChild(textarea);
-    } else if (key === 'customBuildPropsFile' || key === 'webViewUrlDataMonitorRegularExpression' || key === 'showWebViewSourceCodeRegularExpression') { 
+    } else if (key === 'customBuildPropsFile' || key === 'webViewUrlDataMonitorRegularExpression' || key === 'showWebViewSourceCodeRegularExpression') {
         settingDiv.className = 'editor-setting';
         settingDiv.innerHTML = `<label class="editor-setting-label" for="${uniqueId}">${labelText}</label>`;
         const textarea = document.createElement('textarea');
@@ -871,6 +1070,8 @@ function buildSimpleControl(key, value, dataPath, category, isParentToggle = fal
     }
     return settingDiv;
 }
+
+// --- ALL OTHER build... functions like buildWebViewCookieEditor, buildSkipDialogsEditor etc. are included below without changes ---
 
 function buildSkipDialogsEditor(key, category) {
     const container = document.createElement('div');
@@ -911,7 +1112,7 @@ function buildSkipDialogsEditor(key, category) {
         category
     );
     container.appendChild(monitorControl);
-    
+
     return container;
 }
 
@@ -920,7 +1121,7 @@ function buildShowWebViewSourceCodeEditor(key, category) {
     const container = document.createElement('div');
     const mainToggle = buildSimpleControl('Enabled', jsonConfig[category][key], `${category}.${key}`, category, false);
     container.appendChild(mainToggle);
-    
+
     const childContainer = document.createElement('div');
     childContainer.className = 'editor-child-settings';
     mainToggle.querySelector('input').addEventListener('change', e => {
@@ -943,10 +1144,10 @@ function buildShowWebViewSourceCodeEditor(key, category) {
         filterGroup.appendChild(radioRow);
     });
     childContainer.appendChild(filterGroup);
-    
+
     childContainer.appendChild(buildSimpleControl('Filter Strings', jsonConfig[category]['showWebViewSourceCodeFilterStrings'], `${category}.showWebViewSourceCodeFilterStrings`, category));
     childContainer.appendChild(buildSimpleControl('Regular expression', jsonConfig[category]['showWebViewSourceCodeRegularExpression'], `${category}.showWebViewSourceCodeRegularExpression`, category));
-    
+
     container.appendChild(childContainer);
     return container;
 }
@@ -956,7 +1157,7 @@ function buildWebViewMonitorEditor(key, category) {
     const container = document.createElement('div');
     const mainToggle = buildSimpleControl('Enabled', jsonConfig[category][key], `${category}.${key}`, category, false);
     container.appendChild(mainToggle);
-    
+
     const childContainer = document.createElement('div');
     childContainer.className = 'editor-child-settings';
     mainToggle.querySelector('input').addEventListener('change', e => {
@@ -980,10 +1181,10 @@ function buildWebViewMonitorEditor(key, category) {
         filterGroup.appendChild(radioRow);
     });
     childContainer.appendChild(filterGroup);
-    
+
     childContainer.appendChild(buildSimpleControl('Filter Strings', jsonConfig[category]['webViewUrlDataMonitorFilterStrings'], `${category}.webViewUrlDataMonitorFilterStrings`, category));
     childContainer.appendChild(buildSimpleControl('Regular expression', jsonConfig[category]['webViewUrlDataMonitorRegularExpression'], `${category}.webViewUrlDataMonitorRegularExpression`, category));
-    
+
     childContainer.appendChild(buildSimpleControl('webViewUrlDataMonitorUrlDecode', jsonConfig[category]['webViewUrlDataMonitorUrlDecode'], `${category}.webViewUrlDataMonitorUrlDecode`, category));
     childContainer.appendChild(buildSimpleControl('webViewUrlDataMonitorAutoCopy', jsonConfig[category]['webViewUrlDataMonitorAutoCopy'], `${category}.webViewUrlDataMonitorAutoCopy`, category));
     childContainer.appendChild(buildSimpleControl('webViewUrlDataMonitorAutoOpen', jsonConfig[category]['webViewUrlDataMonitorAutoOpen'], `${category}.webViewUrlDataMonitorAutoOpen`, category));
@@ -1080,7 +1281,7 @@ function buildRandomizeBuildPropsEditor(key, category) {
     filterEditorContainer.append(tagsContainer, filterInput, filterHint);
     renderTags();
     childContainer.appendChild(filterDevicesGroup);
-    
+
     const versionGroup = document.createElement('div');
     versionGroup.style.marginTop = '20px';
     const versionToggle = buildSimpleControl('Filter Android versions', settings.devicesDatabaseUseAndroidVersion, `${category}.devicesDatabaseUseAndroidVersion`, category);
@@ -1108,7 +1309,7 @@ function buildRandomizeBuildPropsEditor(key, category) {
         };
         sdkListContainer.appendChild(checkboxRow);
     });
-    
+
     versionGroup.appendChild(sdkListContainer);
     const updateSdkListVisibility = (isEnabled) => {
         sdkListContainer.style.display = isEnabled ? 'block' : 'none';
@@ -1118,7 +1319,7 @@ function buildRandomizeBuildPropsEditor(key, category) {
         updateSdkListVisibility(e.target.checked);
     });
     updateSdkListVisibility(settings.devicesDatabaseUseAndroidVersion);
-    
+
     childContainer.appendChild(versionGroup);
 
     const previewButton = document.createElement('button');
@@ -1129,18 +1330,18 @@ function buildRandomizeBuildPropsEditor(key, category) {
     previewButton.style.marginTop = '20px';
     previewButton.onclick = () => {
         let filtered = [...parsedDevices];
-        
+
         if (settings.filterDevicesDatabase && filters.length > 0) {
             const includeFilters = filters.filter(f => !f.startsWith('-')).map(f => f.toLowerCase());
             const excludeFilters = filters.filter(f => f.startsWith('-')).map(f => f.substring(1).toLowerCase());
 
             if (includeFilters.length > 0) {
-                filtered = filtered.filter(d => 
+                filtered = filtered.filter(d =>
                     includeFilters.some(f => d.manufacturer.toLowerCase().includes(f) || d.brand.toLowerCase().includes(f))
                 );
             }
             if (excludeFilters.length > 0) {
-                filtered = filtered.filter(d => 
+                filtered = filtered.filter(d =>
                     !excludeFilters.some(f => d.manufacturer.toLowerCase().includes(f) || d.brand.toLowerCase().includes(f))
                 );
             }
@@ -1149,19 +1350,19 @@ function buildRandomizeBuildPropsEditor(key, category) {
         if (settings.devicesDatabaseUseAndroidVersion) {
             const selectedSdks = Object.keys(settings.devicesDatabaseSdkVersions).map(Number);
             if (selectedSdks.length > 0) {
-                filtered = filtered.filter(d => 
+                filtered = filtered.filter(d =>
                     d.sdks.some(sdk => selectedSdks.includes(sdk))
                 );
             }
         }
-        
+
         if (filtered.length === 0) {
             alert('No devices match the current filters.');
             return;
         }
 
         const randomDevice = filtered[Math.floor(Math.random() * filtered.length)];
-        
+
         alert(
             `Random Preview:\n\n` +
             `Manufacturer: ${randomDevice.manufacturer}\n` +
@@ -1249,7 +1450,7 @@ function buildWebViewUrlDataFilterEditor(key, category) {
             }
             return control;
         };
-        
+
         const urlGroup = document.createElement('div');
         urlGroup.className = 'editor-sub-group';
         urlGroup.innerHTML = '<div class="editor-sub-group-title">URL</div>';
@@ -1257,7 +1458,7 @@ function buildWebViewUrlDataFilterEditor(key, category) {
         urlGroup.appendChild(createField('Block if matching', 'urlExpressionBlockOnMatch', 'checkbox'));
         urlGroup.appendChild(createField('Replacement', 'urlReplacement'));
         urlGroup.appendChild(createField('URL-encode replacement', 'urlReplacementUrlEncode', 'checkbox'));
-        
+
         const dataGroup = document.createElement('div');
         dataGroup.className = 'editor-sub-group';
         dataGroup.innerHTML = '<div class="editor-sub-group-title">Data</div>';
@@ -1266,7 +1467,7 @@ function buildWebViewUrlDataFilterEditor(key, category) {
         dataGroup.appendChild(createField('Block if matching', 'dataExpressionBlockOnMatch', 'checkbox'));
         dataGroup.appendChild(createField('Replacement', 'dataReplacement'));
         dataGroup.appendChild(createField('Replace all', 'dataReplacementReplaceAll', 'checkbox'));
-        
+
         formWrapper.append(urlGroup, dataGroup);
     };
 
@@ -1282,7 +1483,7 @@ function buildWebViewUrlDataFilterEditor(key, category) {
             renderCurrentFilter();
         }
     };
-    
+
     container.append(header, formWrapper);
     renderCurrentFilter();
     return container;
@@ -1356,7 +1557,7 @@ function buildWebViewOverrideUrlLoadingEditor(key, category) {
             };
             overrideGroup.appendChild(radioRow);
         });
-        
+
         formWrapper.append(urlExpressionControl, overrideGroup);
     };
 
@@ -1372,19 +1573,18 @@ function buildWebViewOverrideUrlLoadingEditor(key, category) {
             renderCurrentItem();
         }
     };
-    
+
     container.append(header, formWrapper);
     renderCurrentItem();
     return container;
 }
-
 
 function buildCustomBuildPropsEditor(key, category) {
     const container = document.createElement('div');
     if (!jsonConfig[category][key] || !Array.isArray(jsonConfig[category][key])) { jsonConfig[category][key] = []; }
     const list = jsonConfig[category][key];
     const defaultProp = { name: "", value: "" };
-    if (list.length === 0) list.push({ ...defaultProp }); 
+    if (list.length === 0) list.push({ ...defaultProp });
     let currentIndex = 0;
 
     const header = document.createElement('div'); header.style.cssText = 'display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem;';
@@ -1404,7 +1604,7 @@ function buildCustomBuildPropsEditor(key, category) {
             tabNav.appendChild(tab);
         });
         deleteBtn.disabled = list.length <= 1; if (list.length === 0) return;
-        
+
         const currentProp = list[currentIndex];
         const createField = (label, prop) => {
             const control = buildSimpleControl(label, currentProp[prop], `${category}.${key}.${currentIndex}.${prop}`, category);
@@ -1425,12 +1625,11 @@ function buildCustomBuildPropsEditor(key, category) {
             renderCurrentProp();
         }
     };
-    
+
     container.append(header, formWrapper);
     renderCurrentProp();
     return container;
 }
-
 
 function buildOverridePreferencesEditor(key, category) {
     const container = document.createElement('div');
@@ -1439,7 +1638,7 @@ function buildOverridePreferencesEditor(key, category) {
     }
     const list = jsonConfig[category][key];
     const defaultPref = { name: "", nameRegExp: false, value: "" };
-    if (list.length === 0) list.push({ ...defaultPref }); 
+    if (list.length === 0) list.push({ ...defaultPref });
     let currentIndex = 0;
 
     const header = document.createElement('div'); header.style.cssText = 'display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem;';
@@ -1459,7 +1658,7 @@ function buildOverridePreferencesEditor(key, category) {
             tabNav.appendChild(tab);
         });
         deleteBtn.disabled = list.length <= 1; if (list.length === 0) return;
-        
+
         const currentPref = list[currentIndex];
         const createField = (label, prop, isCheckbox = false) => {
             const control = buildSimpleControl(label, currentPref[prop], `${category}.${key}.${currentIndex}.${prop}`, category);
@@ -1486,9 +1685,9 @@ function buildOverridePreferencesEditor(key, category) {
             renderCurrentPref();
         }
     };
-    
+
     container.append(header, formWrapper);
-    
+
     const placeholdersCheckbox = buildSimpleControl(
         "Enable placeholders in values",
         jsonConfig[category]['overrideSharedPreferencesEnablePlaceholders'],
@@ -1505,19 +1704,17 @@ function buildOverridePreferencesEditor(key, category) {
 function buildWebViewCookieEditor(key, category) {
     const container = document.createElement('div');
     const isEnabled = Array.isArray(jsonConfig[category][key]);
-    
-    // FIX 1: Pass "Enabled" as the key and set isParentToggle to false.
-    // This prevents the label from becoming "Enable Enabled".
+
     const mainToggle = buildSimpleControl("Enabled", isEnabled, `${category}.${key}_enabled`, category, false);
     container.appendChild(mainToggle);
 
     const childContainer = document.createElement('div');
     childContainer.className = 'editor-child-settings';
-    
+
     mainToggle.querySelector('input').addEventListener('change', e => {
         if (e.target.checked) {
             if (!Array.isArray(jsonConfig[category][key])) {
-                jsonConfig[category][key] = []; 
+                jsonConfig[category][key] = [];
             }
         } else {
             jsonConfig[category][key] = false;
@@ -1530,7 +1727,7 @@ function buildWebViewCookieEditor(key, category) {
     if (isEnabled) {
         const list = jsonConfig[category][key];
         const defaultCookie = { name: "", path: "/", url: "", value: "" };
-        if (list.length === 0) list.push({ ...defaultCookie }); 
+        if (list.length === 0) list.push({ ...defaultCookie });
         let currentIndex = 0;
 
         const header = document.createElement('div'); header.style.cssText = 'display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem;';
@@ -1540,7 +1737,7 @@ function buildWebViewCookieEditor(key, category) {
         const deleteBtn = document.createElement('button'); deleteBtn.textContent = '🗑️'; deleteBtn.className = 'editor-button';
         actions.append(addBtn, deleteBtn); header.append(tabNav, actions);
         const formWrapper = document.createElement('div'); formWrapper.className = 'editor-tab-content-wrapper';
-        
+
         const renderCurrentCookie = () => {
             tabNav.innerHTML = ''; formWrapper.innerHTML = '';
             list.forEach((_, index) => {
@@ -1549,7 +1746,7 @@ function buildWebViewCookieEditor(key, category) {
                 tab.onclick = () => { currentIndex = index; renderCurrentCookie(); };
                 tabNav.appendChild(tab);
             });
-            deleteBtn.disabled = list.length === 0; 
+            deleteBtn.disabled = list.length === 0;
             if (list.length === 0) return;
             const currentCookie = list[currentIndex];
             const createField = (label, prop) => {
@@ -1570,24 +1767,49 @@ function buildWebViewCookieEditor(key, category) {
         };
 
         childContainer.append(header, formWrapper);
-        
-        // FIX 2: Pass the actual config key 'removeAllCookies' so it's treated as a boolean checkbox.
+
         const removeAllContainer = buildSimpleControl('removeAllCookies', jsonConfig[category]['removeAllCookies'], `${category}.removeAllCookies`, category);
         childContainer.appendChild(removeAllContainer);
         renderCurrentCookie();
     }
-    
+
     container.appendChild(childContainer);
     childContainer.style.display = isEnabled ? 'block' : 'none';
 
     return container;
 }
 
-
-// --- Utility Functions ---
 function getValueByPath(obj, path) { return path.reduce((c, k) => (c && typeof c === 'object' && k in c) ? c[k] : undefined, obj); }
 function formatLabel(key) { return key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase()).replace('Web View', 'WebView'); }
-function generateRealisticCoordinates() { const r = (min, max) => Math.random() * (max - min) + min; return { latitude: r(-90, 90).toFixed(6), longitude: r(-180, 180).toFixed(6) }; }
+
+/**
+ * Generates realistic coordinates by picking a random point from major continental landmasses.
+ * This makes the randomized location much more likely to be a real place on land.
+ */
+function generateRealisticCoordinates() {
+    const r = (min, max) => Math.random() * (max - min) + min;
+
+    const landmasses = [
+      // America (North & South)
+      { name: 'America', lat: { min: -56, max: 72 }, lon: { min: -168, max: -34 } },
+      // Europe
+      { name: 'Europe', lat: { min: 36, max: 71 }, lon: { min: -25, max: 45 } },
+      // Asia
+      { name: 'Asia', lat: { min: -11, max: 82 }, lon: { min: 25, max: 180 } },
+      // Australia
+      { name: 'Australia', lat: { min: -44, max: -10 }, lon: { min: 112, max: 154 } }
+    ];
+
+    // Pick a random landmass
+    const area = landmasses[Math.floor(Math.random() * landmasses.length)];
+
+    // Generate coordinates within the selected landmass's bounding box
+    const latitude = r(area.lat.min, area.lat.max).toFixed(6);
+    const longitude = r(area.lon.min, area.lon.max).toFixed(6);
+
+    return { latitude, longitude };
+}
+
 
 function customUnicodeEscape(str) {
     if (typeof str !== 'string' || !str) return str;
@@ -1596,8 +1818,6 @@ function customUnicodeEscape(str) {
     });
 }
 
-
-// --- ENHANCED RANDOM VALUE GENERATOR ---
 function generateRandomValue(key) {
     const _generateDigits = (len) => Array.from({ length: len }, () => Math.floor(Math.random() * 10)).join('');
     const _generateHex = (len) => Array.from({ length: len }, () => '0123456789abcdef'[Math.floor(Math.random() * 16)]).join('');
@@ -1629,11 +1849,9 @@ function generateRandomValue(key) {
     return generators[key] ? generators[key]() : `CUSTOM_${Date.now()}`;
 }
 
-
-// --- Save Function ---
 function getUpdatedConfig() {
     const flatConfig = {};
-    const tempConfig = JSON.parse(JSON.stringify(jsonConfig)); // Create a deep copy to modify for saving
+    const tempConfig = JSON.parse(JSON.stringify(jsonConfig));
 
     for (const category in tempConfig) {
         const settings = tempConfig[category];
@@ -1713,8 +1931,8 @@ function getUpdatedConfig() {
                 flatConfig['custom' + key.charAt(6).toUpperCase() + key.slice(7)] = value[0];
             } else if (Array.isArray(value) && !CUSTOM_EDITORS.includes(key) && !key.toLowerCase().includes('strings') && !key.toLowerCase().includes('filters')) {
                 flatConfig[key] = value[0];
-            } else { 
-                flatConfig[key] = value; 
+            } else {
+                flatConfig[key] = value;
             }
         }
     }
@@ -1725,8 +1943,8 @@ function saveConfig() {
     let packageName = currentPackageName;
     if (!packageName) { packageName = prompt("📦 Package name not detected. Please enter it:"); if (!packageName) { alert("❌ Save cancelled: Package name required."); return; } updatePackageName(packageName); }
     try {
-        const finalFlatConfig = getUpdatedConfig(); 
-        
+        const finalFlatConfig = getUpdatedConfig();
+
         let jsonString = JSON.stringify(finalFlatConfig, null, 2);
         jsonString = jsonString.replace(/\\\\u/g, '\\u');
 
