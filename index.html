@@ -236,7 +236,7 @@
             font-weight: 500;
             color: #333;
         }
-        .editor-setting input[type="text"], .editor-setting input[type="number"], .editor-setting select, .editor-setting textarea {
+        .editor-setting input[type="text"], .editor-setting input[type="password"], .editor-setting input[type="number"], .editor-setting select, .editor-setting textarea {
             width: 100%;
             padding: 10px;
             border: 1px solid var(--border-gray);
@@ -317,6 +317,31 @@
             font-size: 14px;
             line-height: 1;
         }
+        /* Styles for the fallback file input modal */
+        #file-input-modal-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.6); display: flex; align-items: center;
+            justify-content: center; z-index: 3000;
+        }
+        #file-input-modal-content {
+            background: white; padding: 24px; border-radius: 8px;
+            width: 90%; max-width: 600px; box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+        }
+        #file-input-modal-content textarea {
+            width: 100%; height: 250px; margin-top: 10px; font-family: monospace;
+        }
+        .editor-info-text {
+            font-size: 0.85rem;
+            color: #555;
+            margin: 12px 0;
+            line-height: 1.5;
+        }
+        .editor-file-status {
+            font-size: 0.9rem;
+            color: var(--primary-blue);
+            font-weight: 500;
+            margin-top: 4px;
+        }
     </style>
 </head>
 <body>
@@ -386,7 +411,8 @@ const keysWithCustomOption = [
 ];
 
 const NON_INTERACTIVE_DIRECTORY_KEYS = ['addPermissions', 'addProviders', 'addReceivers','addServices','addActivities','stringsProperties','serialFormat'];
-const CUSTOM_EDITORS = ['webViewUrlDataFilterList', 'overrideSharedPreferences', 'customBuildProps', 'webViewCookies', 'webViewOverrideUrlLoadingList', 'skipDialogsStrings'];
+// MODIFIED: Added bundleAppData and deleteOnExit to the custom editors list
+const CUSTOM_EDITORS = ['webViewUrlDataFilterList', 'overrideSharedPreferences', 'customBuildProps', 'webViewCookies', 'webViewOverrideUrlLoadingList', 'skipDialogsStrings', 'bundleFilesDirectories', 'bundleInternalFilesDirectories', 'hostsBlocker', 'bundleAppData', 'deleteOnExit'];
 
 const compoundSettingsMap = new Map([
     ['dnsOverHttps', ['dnsOverHttpsCustomUrl', 'dnsOverHttpsSilent']],
@@ -573,6 +599,9 @@ function analyzeParentChildRelationships() {
         'addSnow': 'snow', 'pictureInPictureSupport': 'pictureInPicture', 'buildsProps': 'buildProps'
     };
     const explicitParentChildGroups = {
+        'hostsBlocker': ['hostsBlockerBlockByDefault', 'hostsBlockerShowNotification', 'hostsBlockerUseFile', 'hostsBlockerFileContent', 'hostsBlockerAllowAllOtherHosts'],
+        'bundleAppData': ['bundleAppDataPath', 'bundleAppDataPassword', 'bundleAppDataEncryptCertificate', 'restoreAppDataOnEveryStart'],
+        'deleteOnExit': ['deleteFilesDirectoriesOnExit', 'securelyDeleteFilesDirectoriesOnExit'],
         'changeInstallUpdateTime': ['customInstallUpdateTime', 'randomizeUserCreationTime', 'relativeInstallUpdateTime', 'relativeInstallUpdateTimeUnit'],
         'randomizeBuildProps': ['filterDevicesDatabase', 'devicesDatabaseFilters', 'devicesDatabaseUseAndroidVersion', 'devicesDatabaseSdkVersions', 'randomizeBuildPropsDeviceNamePrefix'],
         'spoofLocation': ['latitude', 'longitude', 'spoofRandomLocation', 'spoofLocationUseIpLocation', 'spoofLocationApi', 'spoofLocationCalculateBearing', 'spoofLocationCompatibilityMode', 'spoofLocationInterval', 'spoofLocationShareLocationReceiver', 'spoofLocationShowSpoofLocationNotification', 'spoofLocationSimulatePositionalUncertainty', 'favoriteLocationsShowDistance'],
@@ -601,6 +630,13 @@ function analyzeParentChildRelationships() {
                 allParentKeys.add(parentKey);
                 parentChildMap.set(parentKey, children);
                 children.forEach(child => allChildKeys.add(child));
+                 if (!settings.hasOwnProperty(parentKey)) {
+                    if (parentKey === 'deleteOnExit') {
+                        settings[parentKey] = Array.isArray(settings.deleteFilesDirectoriesOnExit);
+                    } else {
+                        settings[parentKey] = true;
+                    }
+                }
             }
         }
 
@@ -666,7 +702,17 @@ function createSettingRow(key, value, category) {
 }
 
 function getSummaryText(key, value, category) {
+    if (key === 'deleteOnExit') {
+        const paths = jsonConfig[category]?.deleteFilesDirectoriesOnExit;
+        if (Array.isArray(paths)) {
+            return `${paths.length} item(s)`;
+        }
+        return "Disabled";
+    }
     if (CUSTOM_EDITORS.includes(key)) {
+        if (key === 'hostsBlocker' || key === 'bundleAppData') {
+            return value ? 'Enabled' : 'Disabled';
+        }
         const count = Array.isArray(value) ? value.length : 0;
         return `${count} item(s)`;
     }
@@ -722,7 +768,13 @@ function saveEditorChanges() {
 
         if (input.type === 'radio') {
             if (input.checked) {
-                current[path[path.length - 1]] = input.value;
+                // Special handling for bundleAppData mode
+                if (input.name === 'bundle-app-data-mode') {
+                    const isEnabled = input.value !== 'disabled';
+                    current['bundleAppData'] = isEnabled;
+                } else {
+                    current[path[path.length - 1]] = input.value;
+                }
             }
             return;
         }
@@ -763,22 +815,226 @@ function createEditorControls(key, category) {
     if (compoundSettingsMap.has(key)) {
         container.appendChild(buildCompoundSettingEditor(key, category));
     }
-    else if (allParentKeys.has(key)) {
+    else if (allParentKeys.has(key) && !CUSTOM_EDITORS.includes(key)) { // Modified to exclude custom editors from generic parent handling
         container.appendChild(buildParentEditor(key, category));
     }
     else if (CUSTOM_EDITORS.includes(key)) {
-        if (key === 'webViewUrlDataFilterList') container.appendChild(buildWebViewUrlDataFilterEditor(key, category));
+        if (key === 'deleteOnExit') container.appendChild(buildDeleteOnExitEditor(key, category));
+        else if (key === 'bundleAppData') container.appendChild(buildBundleAppDataEditor(key, category));
+        else if (key === 'hostsBlocker') container.appendChild(buildHostsBlockerEditor(key, category));
+        else if (key === 'webViewUrlDataFilterList') container.appendChild(buildWebViewUrlDataFilterEditor(key, category));
         else if (key === 'overrideSharedPreferences') container.appendChild(buildOverridePreferencesEditor(key, category));
         else if (key === 'customBuildProps') container.appendChild(buildCustomBuildPropsEditor(key, category));
         else if (key === 'webViewCookies') container.appendChild(buildWebViewCookieEditor(key, category));
         else if (key === 'webViewOverrideUrlLoadingList') container.appendChild(buildWebViewOverrideUrlLoadingEditor(key, category));
         else if (key === 'skipDialogsStrings') container.appendChild(buildSkipDialogsEditor(key, category));
+        else if (key === 'bundleFilesDirectories' || key === 'bundleInternalFilesDirectories') {
+            container.appendChild(buildPathPickerEditor(key, category));
+        }
     }
     else {
         container.appendChild(buildSimpleControl(key, jsonConfig[category][key], `${category}.${key}`, category));
     }
     return container;
 }
+
+// NEW: Editor for "Delete files & directories on exit"
+function buildDeleteOnExitEditor(key, category) {
+    const container = document.createElement('div');
+    const settings = jsonConfig[category];
+
+    // The key is 'deleteOnExit', which acts as the master toggle. Its value is a boolean.
+    const isEnabled = settings[key] === true;
+
+    // Ensure child properties exist for manipulation when the feature is enabled.
+    if (isEnabled && !Array.isArray(settings.deleteFilesDirectoriesOnExit)) {
+        settings.deleteFilesDirectoriesOnExit = [];
+    }
+    if (typeof settings.securelyDeleteFilesDirectoriesOnExit !== 'boolean') {
+        settings.securelyDeleteFilesDirectoriesOnExit = false;
+    }
+
+    // --- Main Enabled Toggle ---
+    const mainToggle = buildSimpleControl('Enabled', isEnabled, `${category}.${key}`, category);
+    container.appendChild(mainToggle);
+
+    const childContainer = document.createElement('div');
+    childContainer.className = 'editor-child-settings';
+    container.appendChild(childContainer);
+
+    // Event listener for the main toggle
+    mainToggle.querySelector('input').addEventListener('change', e => {
+        const checked = e.target.checked;
+        settings[key] = checked; // Update the parent key's boolean value
+        if (checked) {
+            // When turning on, ensure the backing array exists.
+            if (!Array.isArray(settings.deleteFilesDirectoriesOnExit)) {
+                settings.deleteFilesDirectoriesOnExit = [];
+            }
+        }
+        childContainer.style.display = checked ? 'block' : 'none';
+    });
+
+    // --- Path Management UI ---
+    const pathLabel = document.createElement('label');
+    pathLabel.className = 'editor-setting-label';
+    pathLabel.textContent = 'Files & directories';
+    childContainer.appendChild(pathLabel);
+
+    const tagsContainer = document.createElement('div');
+    tagsContainer.className = 'editor-tags-container';
+    tagsContainer.style.minHeight = '60px';
+
+    const renderPaths = () => {
+        tagsContainer.innerHTML = '';
+        const currentPaths = settings.deleteFilesDirectoriesOnExit || [];
+        currentPaths.forEach((path, index) => {
+            const tagEl = document.createElement('span');
+            tagEl.className = 'editor-tag';
+            tagEl.textContent = path;
+            const removeEl = document.createElement('span');
+            removeEl.className = 'remove-tag';
+            removeEl.textContent = '×';
+            removeEl.onclick = () => {
+                settings.deleteFilesDirectoriesOnExit.splice(index, 1);
+                renderPaths();
+            };
+            tagEl.appendChild(removeEl);
+            tagsContainer.appendChild(tagEl);
+        });
+    };
+
+    const addButton = document.createElement('button');
+    addButton.type = 'button';
+    addButton.textContent = '➕ Select Path';
+    addButton.className = 'editor-button primary';
+    addButton.style.width = '100%';
+    addButton.style.marginTop = '8px';
+
+    addButton.onclick = () => {
+        window.currentPathPickerCallback = (selectedPath) => {
+            if (selectedPath && !settings.deleteFilesDirectoriesOnExit.includes(selectedPath)) {
+                settings.deleteFilesDirectoriesOnExit.push(selectedPath);
+                renderPaths();
+            }
+            delete window.currentPathPickerCallback;
+        };
+
+        if (window.Android && typeof window.Android.openPathPicker === 'function') {
+            window.Android.openPathPicker('window.currentPathPickerCallback');
+        } else {
+            console.warn("window.Android.openPathPicker not found. Using prompt() as a fallback.");
+            const path = prompt("Enter the file or directory path:", "/storage/emulated/0/");
+            if (path) { window.currentPathPickerCallback(path); }
+            else { delete window.currentPathPickerCallback; }
+        }
+    };
+
+    childContainer.appendChild(tagsContainer);
+    childContainer.appendChild(addButton);
+
+    // --- Securely Delete Checkbox ---
+    const secureDeleteControl = buildSimpleControl(
+        'Delete files securely',
+        settings.securelyDeleteFilesDirectoriesOnExit,
+        `${category}.securelyDeleteFilesDirectoriesOnExit`,
+        category
+    );
+    secureDeleteControl.style.marginTop = '20px';
+    childContainer.appendChild(secureDeleteControl);
+
+    // Set initial visibility states
+    childContainer.style.display = isEnabled ? 'block' : 'none';
+    if (isEnabled) {
+        renderPaths();
+    }
+
+    return container;
+}
+
+
+// NEW: Editor for selecting paths using a native picker
+function buildPathPickerEditor(key, category) {
+    const container = document.createElement('div');
+    container.className = 'editor-setting';
+
+    // Ensure the config value is an array
+    if (!Array.isArray(jsonConfig[category][key])) {
+        jsonConfig[category][key] = [];
+    }
+    const paths = jsonConfig[category][key];
+
+    container.innerHTML = `<label class="editor-setting-label">${formatLabel(key)}</label>`;
+
+    const tagsContainer = document.createElement('div');
+    tagsContainer.className = 'editor-tags-container';
+    tagsContainer.style.minHeight = '60px'; // Set a min-height for better appearance when empty
+
+    // Function to render the current list of paths as tags
+    const renderPaths = () => {
+        tagsContainer.innerHTML = '';
+        paths.forEach((path, index) => {
+            const tagEl = document.createElement('span');
+            tagEl.className = 'editor-tag';
+            tagEl.textContent = path;
+            const removeEl = document.createElement('span');
+            removeEl.className = 'remove-tag';
+            removeEl.textContent = '×';
+            removeEl.onclick = () => {
+                paths.splice(index, 1);
+                renderPaths(); // Re-render the tags after removal
+            };
+            tagEl.appendChild(removeEl);
+            tagsContainer.appendChild(tagEl);
+        });
+    };
+
+    const addButton = document.createElement('button');
+    addButton.type = 'button';
+    addButton.textContent = '➕ Select Path';
+    addButton.className = 'editor-button primary';
+    addButton.style.width = '100%';
+    addButton.style.marginTop = '8px';
+
+    addButton.onclick = () => {
+        // A global callback function that the native Android code will call with the selected path.
+        // This is defined on the window object to be accessible from the native side.
+        window.currentPathPickerCallback = (selectedPath) => {
+            if (selectedPath && !paths.includes(selectedPath)) {
+                paths.push(selectedPath);
+                renderPaths(); // Update the UI with the new path
+            }
+            // Clean up the global callback to avoid memory leaks
+            delete window.currentPathPickerCallback;
+        };
+
+        // Check for the native Android interface
+        if (window.Android && typeof window.Android.openPathPicker === 'function') {
+            // Call the native function, passing the name of our JS callback function.
+            // The native code should execute this JS function string with the result.
+            window.Android.openPathPicker('window.currentPathPickerCallback');
+        } else {
+            // Fallback for when running in a regular browser
+            console.warn("window.Android.openPathPicker not found. Using prompt() as a fallback.");
+            const path = prompt("Enter the file or directory path:", "/storage/emulated/0/");
+            if (path) {
+                // Manually call the callback if a path was entered
+                window.currentPathPickerCallback(path);
+            } else {
+                // Clean up if the user cancels the prompt
+                delete window.currentPathPickerCallback;
+            }
+        }
+    };
+
+    container.appendChild(tagsContainer);
+    container.appendChild(addButton);
+
+    renderPaths(); // Initial render of any existing paths
+
+    return container;
+}
+
 
 function buildParentEditor(key, category) {
     // Special handling for buildsProps to include the device selector
@@ -976,6 +1232,325 @@ function buildParentEditor(key, category) {
     return container;
 }
 
+// NEW: Custom editor for the "Bundle app data" feature
+function buildBundleAppDataEditor(key, category) {
+    const container = document.createElement('div');
+    const settings = jsonConfig[category];
+
+    // Ensure settings objects exist to avoid errors
+    const ensureSetting = (prop, defaultValue) => {
+        if (settings[prop] === undefined) {
+            settings[prop] = defaultValue;
+        }
+    };
+    ensureSetting('bundleAppData', false);
+    ensureSetting('bundleAppDataPath', '');
+    ensureSetting('bundleAppDataPassword', '');
+    ensureSetting('bundleAppDataEncryptCertificate', false);
+    ensureSetting('restoreAppDataOnEveryStart', false);
+
+    const infoText = document.createElement('p');
+    infoText.className = 'editor-info-text';
+    infoText.textContent = 'Please select a previously exported app data file from the same app.';
+    container.appendChild(infoText);
+
+    // --- Radio Button Group ---
+    const radioGroup = document.createElement('div');
+    radioGroup.className = 'editor-setting';
+
+    const modes = [
+        { value: 'disabled', label: 'Disabled' },
+        { value: 'select', label: 'Select file' },
+        { value: 'specify', label: 'Specify path' }
+    ];
+
+    let currentMode = 'disabled';
+    if (settings.bundleAppData) {
+        // A simple heuristic: if path looks like a URI, assume "select file", otherwise "specify path".
+        // This could be improved with a dedicated mode setting if needed.
+        currentMode = (settings.bundleAppDataPath || '').startsWith('content://') ? 'select' : 'specify';
+    }
+
+    modes.forEach(mode => {
+        const radioRow = document.createElement('div');
+        radioRow.className = 'editor-radio-row';
+        const id = `bundle-data-mode-${mode.value}`;
+        radioRow.innerHTML = `<input type="radio" id="${id}" name="bundle-app-data-mode" value="${mode.value}" data-path="${category}.${key}"><label for="${id}">${mode.label}</label>`;
+        if (mode.value === currentMode) {
+            radioRow.querySelector('input').checked = true;
+        }
+        radioGroup.appendChild(radioRow);
+    });
+    container.appendChild(radioGroup);
+
+    // --- Child Options Container ---
+    const childContainer = document.createElement('div');
+    childContainer.className = 'editor-child-settings';
+    container.appendChild(childContainer);
+
+    // --- Path Selection ---
+    const pathGroup = document.createElement('div');
+    
+    const selectFileButton = document.createElement('button');
+    selectFileButton.type = 'button';
+    selectFileButton.textContent = 'Select App Data File...';
+    selectFileButton.className = 'editor-button primary';
+    selectFileButton.style.width = '100%';
+
+    const pathInput = buildSimpleControl('Path', settings.bundleAppDataPath, `${category}.bundleAppDataPath`, category);
+    pathGroup.append(selectFileButton, pathInput);
+    childContainer.appendChild(pathGroup);
+
+    // --- Password Section ---
+    const passwordGroup = document.createElement('div');
+    const passwordInfo = document.createElement('p');
+    passwordInfo.className = 'editor-info-text';
+    passwordInfo.textContent = 'If the app data was exported with a password, specify it here.';
+    
+    const passwordInput = buildSimpleControl('Password', settings.bundleAppDataPassword, `${category}.bundleAppDataPassword`, category);
+    passwordInput.querySelector('input').type = 'password'; // Set type to password
+    
+    const showPasswordToggle = buildSimpleControl('Show password', false, 'show-password-toggle', category);
+    showPasswordToggle.querySelector('input').onchange = (e) => {
+        passwordInput.querySelector('input').type = e.target.checked ? 'text' : 'password';
+    };
+
+    passwordGroup.append(passwordInfo, passwordInput, showPasswordToggle);
+    childContainer.appendChild(passwordGroup);
+
+    // --- Other Checkboxes ---
+    childContainer.appendChild(buildSimpleControl('Encrypt app data with custom certificate', settings.bundleAppDataEncryptCertificate, `${category}.bundleAppDataEncryptCertificate`, category));
+    childContainer.appendChild(buildSimpleControl('Restore app data on every start of the app', settings.restoreAppDataOnEveryStart, `${category}.restoreAppDataOnEveryStart`, category));
+
+
+    // --- UI Logic ---
+    const updateVisibility = () => {
+        const selectedMode = radioGroup.querySelector('input:checked').value;
+        const isEnabled = selectedMode !== 'disabled';
+        childContainer.style.display = isEnabled ? 'block' : 'none';
+
+        if (isEnabled) {
+            selectFileButton.style.display = selectedMode === 'select' ? 'block' : 'none';
+            pathInput.style.display = selectedMode === 'specify' || selectedMode === 'select' ? 'block' : 'none';
+            pathInput.querySelector('input').readOnly = selectedMode === 'select';
+        }
+    };
+    
+    radioGroup.querySelectorAll('input').forEach(radio => {
+        radio.addEventListener('change', updateVisibility);
+    });
+
+    selectFileButton.onclick = () => {
+        window.appDataFileCallback = (uri) => {
+            if (uri) {
+                pathInput.querySelector('input').value = uri;
+                // Manually trigger an input event to ensure the change is saved
+                pathInput.querySelector('input').dispatchEvent(new Event('input', { bubbles: true }));
+            }
+            delete window.appDataFileCallback;
+        };
+        
+        if (window.Android && typeof window.Android.openAppDataPicker === 'function') {
+            window.Android.openAppDataPicker('window.appDataFileCallback');
+        } else {
+            console.warn("window.Android.openAppDataPicker not found. Using prompt() as fallback.");
+            const path = prompt("Enter the path to the app data file:", "");
+            if (path) {
+                window.appDataFileCallback(path);
+            } else {
+                delete window.appDataFileCallback;
+            }
+        }
+    };
+
+    // Set initial state
+    updateVisibility();
+
+    return container;
+}
+
+
+// CORRECTED: Custom editor for the Hosts Blocker feature
+function buildHostsBlockerEditor(key, category) {
+    const container = document.createElement('div');
+    const settings = jsonConfig[category];
+
+    // **FIX**: Coerce settings to their correct types to prevent rendering errors.
+    settings[key] = settings[key] === true;
+    settings.hostsBlockerBlockByDefault = settings.hostsBlockerBlockByDefault === true;
+    settings.hostsBlockerShowNotification = settings.hostsBlockerShowNotification === true;
+    settings.hostsBlockerUseFile = settings.hostsBlockerUseFile === true;
+    settings.hostsBlockerAllowAllOtherHosts = settings.hostsBlockerAllowAllOtherHosts === true;
+    if (typeof settings.hostsBlockerFileContent !== 'string') {
+        settings.hostsBlockerFileContent = '';
+    }
+
+    // --- Main Enabled Toggle ---
+    const mainToggle = buildSimpleControl('Enabled', settings[key], `${category}.${key}`, category);
+    container.appendChild(mainToggle);
+
+    const childContainer = document.createElement('div');
+    childContainer.className = 'editor-child-settings';
+    container.appendChild(childContainer);
+
+    const updateChildVisibility = (isEnabled) => {
+        childContainer.style.display = isEnabled ? 'block' : 'none';
+    };
+    mainToggle.querySelector('input').addEventListener('change', e => {
+        settings[key] = e.target.checked;
+        updateChildVisibility(e.target.checked);
+    });
+
+    // --- Info Text ---
+    const infoText = document.createElement('p');
+    infoText.className = 'editor-info-text';
+    infoText.textContent = 'For each host that is accessed by the clone a notification is shown. Select Allow to permanently allow the host, Block to permanently block the host or Ignore to ask again when the app is started the next time.';
+    childContainer.appendChild(infoText);
+
+    // --- Child Checkboxes ---
+    // Now these will correctly render as checkboxes because their values are booleans
+    childContainer.appendChild(buildSimpleControl('Block by default', settings.hostsBlockerBlockByDefault, `${category}.hostsBlockerBlockByDefault`, category));
+    childContainer.appendChild(buildSimpleControl('Show notification', settings.hostsBlockerShowNotification, `${category}.hostsBlockerShowNotification`, category));
+    
+    // --- Hosts File Section ---
+    const hostsFileGroup = document.createElement('div');
+    const hostsFileToggle = buildSimpleControl('Hosts file', settings.hostsBlockerUseFile, `${category}.hostsBlockerUseFile`, category);
+    hostsFileGroup.appendChild(hostsFileToggle);
+    
+    const hostsFileOptions = document.createElement('div');
+    hostsFileOptions.className = 'editor-child-settings';
+    hostsFileGroup.appendChild(hostsFileOptions);
+    
+    const updateHostsFileOptionsVisibility = (isEnabled) => {
+        hostsFileOptions.style.display = isEnabled ? 'block' : 'none';
+    };
+    hostsFileToggle.querySelector('input').addEventListener('change', e => {
+        settings.hostsBlockerUseFile = e.target.checked;
+        updateHostsFileOptionsVisibility(e.target.checked);
+    });
+    
+    const fileInfoText = document.createElement('p');
+    fileInfoText.className = 'editor-info-text';
+    fileInfoText.innerHTML = 'You may load a text file to automatically block listed hosts. The format must be 127.0.0.1 &lt;host&gt; per line. You can also use the default AdAway hosts file: https://adaway.org/hosts.txt';
+    hostsFileOptions.appendChild(fileInfoText);
+
+    const fileStatus = document.createElement('div');
+    fileStatus.className = 'editor-file-status';
+
+    const updateFileStatus = () => {
+        const content = settings.hostsBlockerFileContent || '';
+        if (content) {
+            const lineCount = content.split('\n').filter(Boolean).length;
+            fileStatus.textContent = `✅ ${lineCount} line(s) loaded.`;
+        } else {
+            fileStatus.textContent = `No file loaded.`;
+        }
+    };
+    
+    const loadButton = document.createElement('button');
+    loadButton.type = 'button';
+    loadButton.textContent = 'Load hosts file';
+    loadButton.className = 'editor-button primary';
+    loadButton.style.width = '100%';
+    loadButton.onclick = () => {
+        window.hostsFileCallback = (fileContent) => {
+            if (typeof fileContent === 'string') {
+                settings.hostsBlockerFileContent = fileContent;
+            }
+            updateFileStatus();
+            delete window.hostsFileCallback;
+        };
+
+        if (window.Android && typeof window.Android.openFilePicker === 'function') {
+            window.Android.openFilePicker('window.hostsFileCallback');
+        } else {
+            console.warn("window.Android.openFilePicker not found. Using fallback textarea.");
+            showFileContentInputModal(settings.hostsBlockerFileContent || '', (newContent) => {
+                 window.hostsFileCallback(newContent);
+            });
+        }
+    };
+    
+    const clearButton = document.createElement('button');
+    clearButton.type = 'button';
+    clearButton.textContent = 'Clear hosts file';
+    clearButton.className = 'editor-button';
+    clearButton.style.width = '100%';
+    clearButton.style.marginTop = '8px';
+    clearButton.onclick = () => {
+        settings.hostsBlockerFileContent = '';
+        updateFileStatus();
+    };
+
+    hostsFileOptions.appendChild(loadButton);
+    hostsFileOptions.appendChild(clearButton);
+    hostsFileOptions.appendChild(fileStatus);
+    childContainer.appendChild(hostsFileGroup);
+
+    // --- Allow all other hosts ---
+    childContainer.appendChild(buildSimpleControl('Allow all other hosts', settings.hostsBlockerAllowAllOtherHosts, `${category}.hostsBlockerAllowAllOtherHosts`, category));
+    const whitelistInfo = document.createElement('p');
+    whitelistInfo.className = 'editor-info-text';
+    whitelistInfo.innerHTML = 'To create a white-list file, write the host lines as # x.x.x.x &lt;host&gt; and enable Block by default.';
+    childContainer.appendChild(whitelistInfo);
+
+    // Set initial visibility
+    updateChildVisibility(settings[key]);
+    updateHostsFileOptionsVisibility(settings.hostsBlockerUseFile);
+    updateFileStatus();
+    
+    return container;
+}
+
+
+// NEW: Fallback modal for pasting file content in a browser
+function showFileContentInputModal(initialContent, callback) {
+    // Remove existing modal if any
+    const existingModal = document.getElementById('file-input-modal-overlay');
+    if (existingModal) existingModal.remove();
+
+    const overlay = document.createElement('div');
+    overlay.id = 'file-input-modal-overlay';
+
+    const contentDiv = document.createElement('div');
+    contentDiv.id = 'file-input-modal-content';
+
+    contentDiv.innerHTML = `
+        <h3>Paste Hosts File Content</h3>
+        <p>Could not find native file picker. Please paste the content below.</p>
+        <textarea id="file-content-textarea"></textarea>
+    `;
+    
+    const buttonDiv = document.createElement('div');
+    buttonDiv.style.cssText = 'display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px;';
+    
+    const okButton = document.createElement('button');
+    okButton.textContent = 'OK';
+    okButton.className = 'editor-button primary';
+    
+    const cancelButton = document.createElement('button');
+    cancelButton.textContent = 'Cancel';
+    cancelButton.className = 'editor-button';
+
+    buttonDiv.append(cancelButton, okButton);
+    contentDiv.appendChild(buttonDiv);
+    overlay.appendChild(contentDiv);
+    document.body.appendChild(overlay);
+
+    const textarea = document.getElementById('file-content-textarea');
+    textarea.value = initialContent;
+    
+    okButton.onclick = () => {
+        callback(textarea.value);
+        overlay.remove();
+    };
+
+    cancelButton.onclick = () => {
+        overlay.remove();
+    };
+}
+
+
 function buildCompoundSettingEditor(key, category) {
     const container = document.createElement('div');
     const children = compoundSettingsMap.get(key) || [];
@@ -1007,10 +1582,10 @@ function buildSimpleControl(key, value, dataPath, category, isParentToggle = fal
     const labelText = formatLabel(key);
     const uniqueId = `control-id-${dataPath ? dataPath.replace(/\./g, '-') : key.replace(/ /g, '-')}`;
 
-    const isBooleanControl = typeof value === 'boolean' || key.endsWith('EnablePlaceholders') || key === 'removeAllCookies';
+    const isBooleanControl = typeof value === 'boolean' || key.endsWith('EnablePlaceholders') || key === 'removeAllCookies' || key === 'show-password-toggle';
 
     if (isBooleanControl) {
-        const useSimpleCheckbox = key.startsWith('webViewDisable') || key === 'nameRegExp' || key.startsWith('webViewUrlDataMonitor') || key.startsWith('showWebView') || key === 'removeAllCookies' || ANDROID_SDK_VERSIONS.some(v => v.name === key) || key.startsWith('spoofLocation');
+        const useSimpleCheckbox = key.startsWith('webViewDisable') || key === 'nameRegExp' || key.startsWith('webViewUrlDataMonitor') || key.startsWith('showWebView') || key === 'removeAllCookies' || ANDROID_SDK_VERSIONS.some(v => v.name === key) || key.startsWith('spoofLocation') || key.startsWith('hostsBlocker') || key.startsWith('bundleAppData') || key === 'show-password-toggle' || key === 'securelyDeleteFilesDirectoriesOnExit';
         const className = useSimpleCheckbox ? 'editor-simple-checkbox-row' : 'editor-checkbox-row';
         let label = isParentToggle ? `${labelText}` : labelText;
         if(useSimpleCheckbox) label = labelText.replace(/Web View Url Data Monitor /i, '').replace(/Show Web View /i, '').replace(/Web View Cookies /i, '');
@@ -1044,7 +1619,7 @@ function buildSimpleControl(key, value, dataPath, category, isParentToggle = fal
             select.onchange = () => customContainer.style.display = select.value === 'custom' ? 'flex' : 'none';
             settingDiv.appendChild(customContainer);
         }
-    } else if (Array.isArray(value) && (key.toLowerCase().includes('strings') || key.toLowerCase().includes('filters'))) {
+    } else if (Array.isArray(value) && (key.toLowerCase().includes('strings') || key.toLowerCase().includes('filters') || CUSTOM_EDITORS.includes(key))) {
         settingDiv.className = 'editor-setting';
         settingDiv.innerHTML = `<label class="editor-setting-label" for="${uniqueId}">${labelText}</label>`;
         const textarea = document.createElement('textarea');
@@ -1062,8 +1637,10 @@ function buildSimpleControl(key, value, dataPath, category, isParentToggle = fal
         settingDiv.className = 'editor-setting';
         settingDiv.innerHTML = `<label class="editor-setting-label" for="${uniqueId}">${labelText}</label>`;
         const input = document.createElement('input');
-        input.id = uniqueId; input.type = typeof value === 'number' ? 'number' : 'text';
-        input.value = value || ''; input.dataset.path = dataPath;
+        input.id = uniqueId;
+        input.type = (key === 'bundleAppDataPassword') ? 'password' : (typeof value === 'number' ? 'number' : 'text');
+        input.value = value || '';
+        input.dataset.path = dataPath;
         if(key === 'webViewUrlDataMonitorFilterStrings' || key === 'showWebViewSourceCodeFilterStrings') input.placeholder = 'Enter a string';
         if (input.type === 'number') input.step = 'any';
         settingDiv.appendChild(input);
@@ -1905,6 +2482,8 @@ function getUpdatedConfig() {
                             if (settings[childKey] !== undefined) flatConfig[childKey] = settings[childKey];
                         });
                     }
+                } else {
+                    flatConfig[key] = false; // Ensure disabled parents are explicitly set to false if needed
                 }
                 continue;
             }
@@ -1914,6 +2493,14 @@ function getUpdatedConfig() {
                     (parentChildMap.get(key) || []).forEach(childKey => {
                         if (settings[childKey] !== undefined) flatConfig[childKey] = settings[childKey];
                     });
+                } else {
+                     // For virtual parents like deleteOnExit, we need to output the children with their disabled values.
+                    if (key === 'deleteOnExit') {
+                        flatConfig['deleteFilesDirectoriesOnExit'] = originalJsonConfig[category]?.deleteFilesDirectoriesOnExit ?? false;
+                        flatConfig['securelyDeleteFilesDirectoriesOnExit'] = originalJsonConfig[category]?.securelyDeleteFilesDirectoriesOnExit ?? false;
+                    } else {
+                       flatConfig[key] = false;
+                    }
                 }
                 continue;
             }
