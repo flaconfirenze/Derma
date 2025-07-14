@@ -604,7 +604,7 @@ function analyzeParentChildRelationships() {
         'deleteOnExit': ['deleteFilesDirectoriesOnExit', 'securelyDeleteFilesDirectoriesOnExit'],
         'changeInstallUpdateTime': ['customInstallUpdateTime', 'randomizeUserCreationTime', 'relativeInstallUpdateTime', 'relativeInstallUpdateTimeUnit'],
         'randomizeBuildProps': ['filterDevicesDatabase', 'devicesDatabaseFilters', 'devicesDatabaseUseAndroidVersion', 'devicesDatabaseSdkVersions', 'randomizeBuildPropsDeviceNamePrefix'],
-        'spoofLocation': ['latitude', 'longitude', 'spoofRandomLocation', 'spoofLocationUseIpLocation', 'spoofLocationApi', 'spoofLocationCalculateBearing', 'spoofLocationCompatibilityMode', 'spoofLocationInterval', 'spoofLocationShareLocationReceiver', 'spoofLocationShowSpoofLocationNotification', 'spoofLocationSimulatePositionalUncertainty', 'favoriteLocationsShowDistance'],
+        'spoofLocation': ['spoofLocationLatitude', 'spoofLocationLongitude', 'spoofRandomLocation', 'spoofLocationUseIpLocation', 'spoofLocationApi', 'spoofLocationCalculateBearing', 'spoofLocationCompatibilityMode', 'spoofLocationInterval', 'spoofLocationShareLocationReceiver', 'spoofLocationShowSpoofLocationNotification', 'spoofLocationSimulatePositionalUncertainty', 'favoriteLocationsShowDistance'],
         'webViewPrivacyOptions': ['webViewDisableWebRtc', 'webViewDisableWebGl', 'webViewDisableAudioContext'],
         'webViewUrlDataMonitor': ['webViewUrlDataMonitorAutoCopy', 'webViewUrlDataMonitorAutoOpen', 'webViewUrlDataMonitorFilter', 'webViewUrlDataMonitorFilterStrings', 'webViewUrlDataMonitorRegularExpression', 'webViewUrlDataMonitorShowJavaScriptUrls', 'webViewUrlDataMonitorShowOverrideUrlLoading', 'webViewUrlDataMonitorUrlDecode'],
         'showWebViewSourceCode': ['showWebViewIFrameSourceCode', 'showWebViewSourceCodeFilter', 'showWebViewSourceCodeFilterStrings', 'showWebViewSourceCodeRegularExpression']
@@ -1133,10 +1133,11 @@ function buildParentEditor(key, category) {
 
         if (key === 'spoofLocation') {
             const coordsContainer = document.createElement('div');
-            const latValue = jsonConfig[category]['latitude'] !== undefined ? jsonConfig[category]['latitude'] : '';
-            const lonValue = jsonConfig[category]['longitude'] !== undefined ? jsonConfig[category]['longitude'] : '';
-            const latEditor = buildSimpleControl('Latitude', latValue, `${category}.latitude`, category);
-            const lonEditor = buildSimpleControl('Longitude', lonValue, `${category}.longitude`, category);
+            // --- CORRECTED KEYS ---
+            const latValue = jsonConfig[category]['spoofLocationLatitude'] !== undefined ? jsonConfig[category]['spoofLocationLatitude'] : '';
+            const lonValue = jsonConfig[category]['spoofLocationLongitude'] !== undefined ? jsonConfig[category]['spoofLocationLongitude'] : '';
+            const latEditor = buildSimpleControl('Latitude', latValue, `${category}.spoofLocationLatitude`, category);
+            const lonEditor = buildSimpleControl('Longitude', lonValue, `${category}.spoofLocationLongitude`, category);
 
             const mapContainer = document.createElement('div');
             mapContainer.style.cssText = 'position: relative; margin: 15px 0; border: 1px solid var(--border-gray);';
@@ -1189,6 +1190,7 @@ function buildParentEditor(key, category) {
                 latInput.value = coords.latitude;
                 lonInput.value = coords.longitude;
                 updateMapDot(coords.latitude, coords.longitude);
+                // Dispatch input events to ensure changes are captured by the save logic
                 latInput.dispatchEvent(new Event('input', { bubbles: true }));
                 lonInput.dispatchEvent(new Event('input', { bubbles: true }));
             };
@@ -1197,7 +1199,8 @@ function buildParentEditor(key, category) {
             coordsContainer.append(latEditor, lonEditor, mapContainer, buttonContainer);
             const otherOptionsContainer = document.createElement('div');
             children.forEach(childKey => {
-                if(jsonConfig[category].hasOwnProperty(childKey) && !['latitude', 'longitude'].includes(childKey)){
+                 // --- CORRECTED EXCLUSION LIST ---
+                if(jsonConfig[category].hasOwnProperty(childKey) && !['spoofLocationLatitude', 'spoofLocationLongitude'].includes(childKey)){
                      otherOptionsContainer.appendChild(buildSimpleControl(childKey, jsonConfig[category][childKey], `${category}.${childKey}`, category));
                 }
             });
